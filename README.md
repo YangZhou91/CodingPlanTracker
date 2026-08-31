@@ -1,5 +1,7 @@
 # PlanMeter
 
+[![build](https://github.com/YangZhou91/CodingPlanTracker/actions/workflows/build.yml/badge.svg)](https://github.com/YangZhou91/CodingPlanTracker/actions/workflows/build.yml)
+
 A compact, always-on-top Windows widget for **LLM coding-plan quota**. See how much of each plan is left this period — without opening five provider dashboards.
 
 ![PlanMeter widget](docs/widget.png)

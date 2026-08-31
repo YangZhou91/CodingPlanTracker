@@ -1,0 +1,41 @@
+name: build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore PlanMeter.sln
+
+      - name: Build
+        run: dotnet build PlanMeter.sln -c Release --no-restore
+
+      - name: Test
+        shell: cmd
+        run: dotnet test tests\PlanMeter.Core.Tests\PlanMeter.Core.Tests.csproj -c Release --no-build --filter Category!=Dogfood
+
+      - name: Publish
+        run: >
+          dotnet publish src/PlanMeter.App/PlanMeter.App.csproj
+          -c Release -r win-x64 --self-contained
+          -p:PublishSingleFile=true
+          -p:PublishReadyToRun=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -o artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PlanMeter
+          path: artifacts/PlanMeter.App.exe
