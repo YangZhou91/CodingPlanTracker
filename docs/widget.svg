@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="150" viewBox="0 0 280 150" role="img" aria-label="PlanMeter widget">
+  <title>PlanMeter</title>
+  <rect width="280" height="150" fill="#F5F5F5"/>
+  <style>
+    .name { font: 13px "Segoe UI Variable Text", "Segoe UI", sans-serif; fill: #1A1A1A; }
+    .chip, .time { font: 600 11px "Segoe UI Variable Text", "Segoe UI", sans-serif; fill: #5A5A5A; }
+  </style>
+
+  <!-- Z.ai: remaining 100%, WEEK, no compact reset -->
+  <text class="name" x="12" y="25">Z.ai</text>
+  <rect x="48" y="22" width="154" height="3" rx="1" fill="#E0E0E0"/>
+  <rect x="48" y="22" width="154" height="3" rx="1" fill="#0E7A4A"/>
+  <rect x="210" y="11" width="46" height="20" rx="2" fill="#FFFFFF" stroke="#E0E0E0"/>
+  <text class="chip" x="233" y="25" text-anchor="middle">WEEK</text>
+  <line x1="12" y1="34" x2="268" y2="34" stroke="#E0E0E0"/>
+
+  <!-- Grok: remaining 97%, WEEK, 6d -->
+  <text class="name" x="12" y="52">Grok</text>
+  <rect x="52" y="49" width="130" height="3" rx="1" fill="#E0E0E0"/>
+  <rect x="52" y="49" width="126" height="3" rx="1" fill="#0E7A4A"/>
+  <rect x="190" y="38" width="46" height="20" rx="2" fill="#FFFFFF" stroke="#E0E0E0"/>
+  <text class="chip" x="213" y="52" text-anchor="middle">WEEK</text>
+  <text class="time" x="244" y="52">6d</text>
+  <line x1="12" y1="61" x2="268" y2="61" stroke="#E0E0E0"/>
+
+  <!-- OpenCode GO: remaining 8%, MONTH, 1d -->
+  <text class="name" x="12" y="79">OpenCode GO</text>
+  <rect x="108" y="76" width="74" height="3" rx="1" fill="#E0E0E0"/>
+  <rect x="108" y="76" width="6" height="3" rx="1" fill="#0E7A4A"/>
+  <rect x="190" y="65" width="46" height="20" rx="2" fill="#FFFFFF" stroke="#E0E0E0"/>
+  <text class="chip" x="213" y="79" text-anchor="middle">MONTH</text>
+  <text class="time" x="244" y="79">1d</text>
+  <line x1="12" y1="88" x2="268" y2="88" stroke="#E0E0E0"/>
+
+  <!-- MiniMax: remaining 90%, 5H, 3h -->
+  <text class="name" x="12" y="106">MiniMax</text>
+  <rect x="72" y="103" width="126" height="3" rx="1" fill="#E0E0E0"/>
+  <rect x="72" y="103" width="113" height="3" rx="1" fill="#0E7A4A"/>
+  <rect x="206" y="92" width="30" height="20" rx="2" fill="#FFFFFF" stroke="#E0E0E0"/>
+  <text class="chip" x="221" y="106" text-anchor="middle">5H</text>
+  <text class="time" x="244" y="106">3h</text>
+  <line x1="12" y1="115" x2="268" y2="115" stroke="#E0E0E0"/>
+
+  <!-- Codex: remaining 88%, 5H, 4h -->
+  <text class="name" x="12" y="133">Codex</text>
+  <rect x="60" y="130" width="138" height="3" rx="1" fill="#E0E0E0"/>
+  <rect x="60" y="130" width="121" height="3" rx="1" fill="#0E7A4A"/>
+  <rect x="206" y="119" width="30" height="20" rx="2" fill="#FFFFFF" stroke="#E0E0E0"/>
+  <text class="chip" x="221" y="133" text-anchor="middle">5H</text>
+  <text class="time" x="244" y="133">4h</text>
+</svg>

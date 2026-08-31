@@ -4,7 +4,7 @@
 
 A compact, always-on-top Windows widget for **LLM coding-plan quota**. See how much of each plan is left this period — without opening five provider dashboards.
 
-![PlanMeter widget](docs/widget.png)
+![PlanMeter widget](docs/widget.svg)
 
 Each row is one plan. The bar is **remaining quota**. The chip is the window that is binding right now (`5H` / `WEEK` / `MONTH`). The number beside it is when that window resets.
 
