@@ -1,0 +1,115 @@
+## ─────────────────────────────────────────────────────────────
+## PlanMeter .gitignore  —  WPF on .NET 8, Windows-only v1
+## ─────────────────────────────────────────────────────────────
+
+### Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+publish/
+bld/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+x64/
+x86/
+
+### Build / app logs   (SEC-04: app writes under %LOCALAPPDATA%\PlanMeter\logs;
+###                      never commit any log file, anywhere in the tree)
+*.log
+*.binlog
+*.tlog
+[Ll]og/
+[Ll]ogs/
+
+### NuGet   (PackageReference-only — no packages/ folder expected)
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+
+### Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.code-workspace
+*.user
+*.userosscache
+*.suo
+*.rsuser
+*.sln.docstates
+*.tmp_proj
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+
+### ReSharper / analyzers
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+### Test results & coverage
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.coverage
+*.coveragexml
+coverage/
+
+### Code-signing & strong-name keys  (CRITICAL for Phase 6 — never commit)
+*.pfx
+*.pvk
+*.snk
+
+### Local secrets   (SEC-01/04 defense-in-depth: never commit any credential-shaped file)
+*.key.bin
+*.secret
+*.token
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.*.json     # local overrides only; the template appsettings.json stays tracked
+
+### Windows app packaging  (Phase 6 distribution artifacts)
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+*.pdx
+BundleArtifacts/
+
+### OS / editor junk
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+*.swp
+*.swo
+*~
+
+### Spec documents (local-only — UI-SPEC / AI-SPEC and any *SPEC.md)
+*SPEC.md
+**/*SPEC.md
+
+### Planning docs (local-only)
+.plan
+.plan/
+.planning/
+
+### GSD runtime state  (machine/run-specific sentinels — regenerated each run, not portable)
+.gsd/
+.gsd
+.gsd-id
+.worktrees
+.cache/
+tmp/
+.scratch/
+.envrc
+
+### Local browser / agent capture (not source)
+.playwright-mcp/

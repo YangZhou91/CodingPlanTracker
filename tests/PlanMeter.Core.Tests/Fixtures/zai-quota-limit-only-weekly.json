@@ -1,0 +1,17 @@
+{
+  "code": 200,
+  "msg": "Operation successful",
+  "data": {
+    "limits": [
+      {
+        "type": "TOKENS_LIMIT",
+        "number": 7,
+        "window": 604800,
+        "used": 4100000,
+        "limit": 10000000,
+        "resetTime": "2026-08-14T03:00:00Z"
+      }
+    ]
+  },
+  "success": true
+}

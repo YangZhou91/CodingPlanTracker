@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12</LangVersion>
+    <!-- SEC-04: PlanMeter never emits telemetry, crash uploads, or auto-update traffic.
+         The only outbound egress is the Z.ai quota fetch via the allow-listed 'zai' HttpClient
+         (see Http/AllowListHandler.cs). Do not add any SDK that performs out-of-process data flow. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="8.0.0" />
+    <PackageReference Include="Polly" Version="8.4.1" />
+    <PackageReference Include="Serilog" Version="4.0.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <!-- DPAPI for SEC-04 manual key encryption (Windows-only by design). -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Test-injection seam: ZaiPollingService has an internal ctor accepting a tick
+         interval (G-01-7 regression test exercises the PeriodicTimer single-outstanding-
+         wait crash branch without a 10-min wait). Production code is unaffected. -->
+    <InternalsVisibleTo Include="PlanMeter.Core.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,9 @@
+{
+  "rate_limit": {
+    "primary_window": {
+      "used_percent": 61,
+      "limit_window_seconds": 604800,
+      "reset_at": "2026-08-26T00:00:00Z"
+    }
+  }
+}

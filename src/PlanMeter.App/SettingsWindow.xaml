@@ -1,0 +1,122 @@
+<Window x:Class="PlanMeter.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="PlanMeter Settings"
+        WindowStyle="SingleBorderWindow"
+        Topmost="False"
+        ShowInTaskbar="True"
+        Width="360"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Brush.Surface}">
+
+    <!-- D-01/D-02 — the dedicated activatable settings window (normal native title bar,
+         non-topmost, NOT WS_EX_NOACTIVATE; Owner set in code by MainWindow.Settings_Click).
+         Opened from the widget-global Settings… menu item; a second click ACTIVATES the
+         existing window (single instance). Key management lives here — the Phase-1/2
+         inline key-entry region is retired (D-01). No control is force-focused on open
+         (UI-SPEC §Settings-Window-Level Affordances). -->
+    <!-- UI-SPEC: StackPanel Padding = lg (16) — WPF Panels have no Padding property, so
+         the lg inset is the Border wrapping the content StackPanel. -->
+    <Border Padding="16">
+        <StackPanel Orientation="Vertical">
+
+        <!-- Providers section heading (Body 13 Semibold, OnSurface; margin-bottom sm). -->
+        <TextBlock Text="Providers"
+                   Style="{StaticResource TextBodyStyle}"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource Brush.OnSurface}"
+                   Margin="0,0,0,8" />
+
+        <!-- Per-provider cards, code-built in registry order (D-10: key-status rows +
+             key blocks render ONLY for RequiresManualKey adapters; keyless providers
+             render name + card shell). Gap between cards = 8 DIP (Space.Sm). -->
+        <StackPanel x:Name="CardsHost" Orientation="Vertical" />
+
+        <!-- Polling section (CONF-03/SC#3, 03-04) — the Phase-3 section break between
+             Providers and Polling (Space.3Xl = the reserved token consumed here). The
+             interval card carries the preset dropdown {5,10,15,30,60} min, the current
+             interval pre-selected, and the honest helper copy (D-13: no immediate fetch).
+             The dropdown/ComboBox items are code-built from PollingDefaults.PresetIntervalSeconds
+             (SettingsWindow.xaml.cs) so the XAML stays declarative. -->
+        <Rectangle Height="{StaticResource Space.3Xl}" />
+
+        <TextBlock Text="Polling"
+                   Style="{StaticResource TextBodyStyle}"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource Brush.OnSurface}"
+                   Margin="0,0,0,8" />
+
+        <Border Background="{DynamicResource Brush.Surface.Elevated}"
+                BorderBrush="{DynamicResource Brush.Divider}"
+                BorderThickness="1"
+                CornerRadius="2"
+                Padding="12,8,12,8"
+                Margin="0,0,0,8">
+            <StackPanel Orientation="Vertical">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Polling interval"
+                               Style="{StaticResource TextBodyStyle}"
+                               Foreground="{DynamicResource Brush.OnSurface}"
+                               VerticalAlignment="Center" />
+                    <ComboBox x:Name="IntervalCombo"
+                              Grid.Column="1"
+                              Width="96"
+                              VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Changes take effect on the next scheduled poll."
+                           Style="{StaticResource TextBodyStyle}"
+                           Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
+                           TextWrapping="Wrap"
+                           Margin="0,8,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- BOOT-01 — Startup card. Checkbox state is derived from File.Exists of
+             shell:startup\PlanMeter.lnk (no ConfigData field). Click handler in code-behind. -->
+        <Rectangle Height="{StaticResource Space.3Xl}" />
+        <TextBlock Text="Startup"
+                   Style="{StaticResource TextBodyStyle}"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource Brush.OnSurface}"
+                   Margin="0,0,0,8" />
+        <Border Background="{DynamicResource Brush.Surface.Elevated}"
+                BorderBrush="{DynamicResource Brush.Divider}"
+                BorderThickness="1"
+                CornerRadius="2"
+                Padding="12,8,12,8"
+                Margin="0,0,0,8">
+            <StackPanel Orientation="Vertical">
+                <CheckBox x:Name="BootToggle"
+                          Content="Start with Windows"
+                          Foreground="{DynamicResource Brush.OnSurface}"
+                          AutomationProperties.Name="Start with Windows" />
+                <TextBlock Text="Starts PlanMeter when you sign in to Windows. If you move the app, uncheck and re-check to update the shortcut."
+                           Style="{StaticResource TextBodyStyle}"
+                           Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
+                           TextWrapping="Wrap"
+                           Margin="0,8,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- W1 window-level error line (Body 13, Brush.Error, collapsed by default).
+             Shown only on a config.json write failure in Plan 03-03/03-04; included now
+             so later plans consume it. SEC-03: error copy never carries a key/URL/header/body. -->
+        <TextBlock x:Name="WindowErrorLine"
+                   Text="Couldn't save settings. Changes won't survive a restart."
+                   Style="{StaticResource TextBodyStyle}"
+                   Foreground="{DynamicResource Brush.Error}"
+                   TextWrapping="Wrap"
+                   Margin="0,16,0,0"
+                   Visibility="Collapsed" />
+        </StackPanel>
+    </Border>
+</Window>

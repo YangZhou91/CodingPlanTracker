@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <LangVersion>12</LangVersion>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- SEC-04: this App process bootstraps with NO telemetry / crash-upload / auto-updater.
+         The only outbound traffic is the Z.ai quota fetch through the allow-listed 'zai'
+         HttpClient (see App.xaml.cs guard comment + Core/Http/AllowListHandler.cs). -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PlanMeter.Core\PlanMeter.Core.csproj" />
+  </ItemGroup>
+
+</Project>
+

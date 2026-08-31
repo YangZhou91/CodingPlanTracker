@@ -1,0 +1,100 @@
+<Window x:Class="PlanMeter.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PlanMeter.App"
+        mc:Ignorable="d"
+        Title="PlanMeter"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="False"
+        Topmost="True"
+        ShowInTaskbar="True"
+        SizeToContent="WidthAndHeight"
+        Background="{DynamicResource Brush.Surface}"
+        MinWidth="240"
+        SizeChanged="Window_SizeChanged">
+
+    <!-- D-24 widget-global ContextMenu (right-click on the drag region of ANY row):
+         Refresh now / [conditional: Open {Provider} console] / separator / About
+         PlanMeter / Settings… / Quit. The conditional console item (D-09) is INSERTED
+         per row in code (BuildRowStack) directly below "Refresh now" — visible only on
+         rows whose adapter declares a ConsoleUrl; because the resource is
+         x:Shared="False" each row owns its own menu instance, so the insertion never
+         leaks across rows. Key management lives in the settings window (D-01). -->
+    <Window.Resources>
+        <ContextMenu x:Key="GlobalMenu" x:Shared="False">
+            <MenuItem Header="Refresh now"
+                      Click="RefreshNow_Click"
+                      ToolTip="Fetches every provider now, no more than once per minute." />
+            <Separator />
+            <MenuItem Header="About PlanMeter" Click="About_Click" />
+            <MenuItem Header="Settings…" Click="Settings_Click" ToolTip="Manage providers, keys, and the polling interval." />
+            <MenuItem Header="Quit" Click="Quit_Click" />
+        </ContextMenu>
+    </Window.Resources>
+
+    <Border Padding="12,8,12,8">
+        <StackPanel Orientation="Vertical">
+
+            <!-- WIDGET-02/drag grab handle — a 6-dot cue at the top-left, hover-only.
+                 Visible only when a row's DragRegion is hovered (wired per row in code). -->
+            <Canvas x:Name="GrabHandle"
+                    Width="6" Height="4"
+                    HorizontalAlignment="Left"
+                    Margin="0,0,0,2"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False">
+                <Ellipse Width="1" Height="1" Canvas.Left="0" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+                <Ellipse Width="1" Height="1" Canvas.Left="2" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+                <Ellipse Width="1" Height="1" Canvas.Left="4" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+                <Ellipse Width="1" Height="1" Canvas.Left="0" Canvas.Top="2" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+                <Ellipse Width="1" Height="1" Canvas.Left="2" Canvas.Top="2" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+                <Ellipse Width="1" Height="1" Canvas.Left="4" Canvas.Top="2" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+            </Canvas>
+
+            <!-- D-23 — row stack. One ProviderRow per enabled provider, in registry order,
+                 separated by 1 DIP Brush.Divider strokes (applied to non-last rows in code).
+                 Each row renders ONLY its own store slot (PROV-02/row-isolation, D-14). -->
+            <StackPanel x:Name="RowStack" Orientation="Vertical" />
+
+            <!-- WIDGET-02/empty-stack + Phase-3 W8 re-entry — when every provider is
+                 disabled (the user toggled them all off, or no keyed provider is
+                 registered), show the Phase-3 copy + a Settings… affordance so the
+                 strip is actionable, not a dead end. The button opens the SAME single
+                 settings window as the widget-global Settings… menu item (Settings_Click).
+                 WS_EX_NOACTIVATE suppresses keyboard focus steal, not mouse input — the
+                 click fires normally and the settings window then activates (D-02). -->
+            <StackPanel x:Name="EmptyStatePanel" Orientation="Vertical" Visibility="Collapsed">
+                <TextBlock Text="No providers enabled."
+                           Style="{StaticResource TextBodyStyle}"
+                           Foreground="{DynamicResource Brush.OnSurface}"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="Enable a provider in Settings to see usage."
+                           Style="{StaticResource TextBodyStyle}"
+                           Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
+                           TextWrapping="Wrap" />
+                <Button Content="Settings…"
+                        Click="Settings_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,8,0,0" />
+            </StackPanel>
+
+            <!-- Inline About panel (WIDGET-02 right-click menu → About PlanMeter).
+                 Non-modal: a toggle-able label below the row stack, NOT a dialog. -->
+            <Border x:Name="AboutPanel"
+                    Background="{DynamicResource Brush.Surface.Elevated}"
+                    BorderBrush="{DynamicResource Brush.Divider}"
+                    BorderThickness="0,1,0,0"
+                    Padding="12,8,12,8"
+                    Margin="0,8,-12,-8"
+                    Visibility="Collapsed">
+                <TextBlock x:Name="AboutText"
+                           Text="PlanMeter v1.0"
+                           Style="{StaticResource TextBodyStyle}"
+                           Foreground="{DynamicResource Brush.OnSurface.Dimmed}" />
+            </Border>
+        </StackPanel>
+    </Border>
+</Window>
