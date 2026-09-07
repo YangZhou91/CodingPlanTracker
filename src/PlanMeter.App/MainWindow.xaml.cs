@@ -540,12 +540,14 @@ public partial class MainWindow : Window
 
     private void DragRegion_MouseEnter(object sender, MouseEventArgs e)
     {
-        GrabHandle.Visibility = Visibility.Visible;
+        // Opacity is render-only — Visibility Collapsed↔Visible used to resize the
+        // SizeToContent HWND by 6 DIP at every row boundary (hover flicker).
+        GrabHandle.Opacity = 1;
     }
 
     private void DragRegion_MouseLeave(object sender, MouseEventArgs e)
     {
-        GrabHandle.Visibility = Visibility.Collapsed;
+        GrabHandle.Opacity = 0;
     }
 
     /// <summary>

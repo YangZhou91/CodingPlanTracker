@@ -35,24 +35,12 @@
         </ContextMenu>
     </Window.Resources>
 
-    <Border Padding="12,8,12,8">
-        <StackPanel Orientation="Vertical">
-
-            <!-- WIDGET-02/drag grab handle — a 6-dot cue at the top-left, hover-only.
-                 Visible only when a row's DragRegion is hovered (wired per row in code). -->
-            <Canvas x:Name="GrabHandle"
-                    Width="6" Height="4"
-                    HorizontalAlignment="Left"
-                    Margin="0,0,0,2"
-                    Visibility="Collapsed"
-                    IsHitTestVisible="False">
-                <Ellipse Width="1" Height="1" Canvas.Left="0" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
-                <Ellipse Width="1" Height="1" Canvas.Left="2" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
-                <Ellipse Width="1" Height="1" Canvas.Left="4" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
-                <Ellipse Width="1" Height="1" Canvas.Left="0" Canvas.Top="2" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
-                <Ellipse Width="1" Height="1" Canvas.Left="2" Canvas.Top="2" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
-                <Ellipse Width="1" Height="1" Canvas.Left="4" Canvas.Top="2" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
-            </Canvas>
+    <!-- Overlay Grid: GrabHandle must NOT sit in the SizeToContent document flow.
+         Collapsed↔Visible as a StackPanel sibling grew/shrunk the HWND by 6 DIP on
+         every DragRegion enter/leave (flicker when sweeping SizeAll across rows). -->
+    <Grid>
+        <Border Padding="12,8,12,8">
+            <StackPanel Orientation="Vertical">
 
             <!-- D-23 — row stack. One ProviderRow per enabled provider, in registry order,
                  separated by 1 DIP Brush.Divider strokes (applied to non-last rows in code).
@@ -95,6 +83,24 @@
                            Style="{StaticResource TextBodyStyle}"
                            Foreground="{DynamicResource Brush.OnSurface.Dimmed}" />
             </Border>
-        </StackPanel>
-    </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- WIDGET-02/drag grab handle — 6-dot cue at the top-left, hover-only.
+             Overlay + Opacity (render-only) so hover never invalidates measure. -->
+        <Canvas x:Name="GrabHandle"
+                Width="6" Height="4"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="12,8,0,0"
+                Opacity="0"
+                IsHitTestVisible="False">
+            <Ellipse Width="1" Height="1" Canvas.Left="0" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+            <Ellipse Width="1" Height="1" Canvas.Left="2" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+            <Ellipse Width="1" Height="1" Canvas.Left="4" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+            <Ellipse Width="1" Height="1" Canvas.Left="0" Canvas.Top="2" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+            <Ellipse Width="1" Height="1" Canvas.Left="2" Canvas.Top="2" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+            <Ellipse Width="1" Height="1" Canvas.Left="4" Canvas.Top="2" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
+        </Canvas>
+    </Grid>
 </Window>
