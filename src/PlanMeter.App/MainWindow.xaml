@@ -57,7 +57,7 @@
             <!-- D-23 — row stack. One ProviderRow per enabled provider, in registry order,
                  separated by 1 DIP Brush.Divider strokes (applied to non-last rows in code).
                  Each row renders ONLY its own store slot (PROV-02/row-isolation, D-14). -->
-            <StackPanel x:Name="RowStack" Orientation="Vertical" />
+            <StackPanel x:Name="RowStack" Orientation="Vertical" Grid.IsSharedSizeScope="True" />
 
             <!-- WIDGET-02/empty-stack + Phase-3 W8 re-entry — when every provider is
                  disabled (the user toggled them all off, or no keyed provider is

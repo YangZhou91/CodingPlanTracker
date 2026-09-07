@@ -21,9 +21,8 @@
             <Grid x:Name="RowOuter">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="WindowChip" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="ResetTime" />
                 </Grid.ColumnDefinitions>
 
                 <!-- DRAG region: provider-name + figure area. DragMove fires ONLY from
@@ -37,7 +36,7 @@
                       Cursor="SizeAll"
                       MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="ProviderName" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
@@ -120,8 +119,8 @@
                              exists yet. Reduced-motion collapses this to the static glyph. -->
                         <ProgressBar x:Name="LoadingProgress"
                                      IsIndeterminate="True"
-                                     Width="80" Height="3"
-                                     HorizontalAlignment="Right"
+                                     Height="3"
+                                     HorizontalAlignment="Stretch"
                                      VerticalAlignment="Center"
                                      Visibility="Collapsed" />
 
@@ -149,6 +148,7 @@
                         Padding="6,4"
                         MinHeight="20"
                         Visibility="Collapsed"
+                        HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
                         Cursor="Arrow"
                         Margin="8,0,8,0">
@@ -156,6 +156,7 @@
                                Text="5H"
                                Style="{StaticResource TextLabelStyle}"
                                Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
+                               HorizontalAlignment="Center"
                                TextWrapping="NoWrap" />
                 </Border>
 
