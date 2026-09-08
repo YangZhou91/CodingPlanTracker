@@ -49,6 +49,8 @@ dotnet publish src/PlanMeter.App/PlanMeter.App.csproj -c Release -r win-x64 --se
 
 Or `pwsh scripts/publish-sign.ps1` for a signed single-file EXE.
 
+Pushing a git tag matching `v*` publishes a GitHub Release with `PlanMeter.exe` attached.
+
 ## Privacy
 
 PlanMeter never phones home. Manual keys live under `%LOCALAPPDATA%\PlanMeter\credentials\` as DPAPI blobs. Codex credentials are read from the local Codex CLI file and are never written back.
