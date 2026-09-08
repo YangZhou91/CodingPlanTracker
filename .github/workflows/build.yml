@@ -34,7 +34,6 @@ jobs:
           dotnet publish src/PlanMeter.App/PlanMeter.App.csproj
           -c Release -r win-x64 --self-contained
           -p:PublishSingleFile=true
-          -p:PublishReadyToRun=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -o artifacts
 

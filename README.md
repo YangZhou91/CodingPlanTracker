@@ -44,7 +44,7 @@ Right-click the widget → **Settings…** to add keys, log in to Grok, or enabl
 ## Build
 
 ```bash
-dotnet publish src/PlanMeter.App/PlanMeter.App.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:PublishReadyToRun=true -p:IncludeNativeLibrariesForSelfExtract=true
+dotnet publish src/PlanMeter.App/PlanMeter.App.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
 ```
 
 Or `pwsh scripts/publish-sign.ps1` for a signed single-file EXE.

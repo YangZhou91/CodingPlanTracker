@@ -65,7 +65,6 @@ dotnet publish src/PlanMeter.App/PlanMeter.App.csproj `
     -r win-x64 `
     --self-contained `
     -p:PublishSingleFile=true `
-    -p:PublishReadyToRun=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -o $ArtifactsDir
 
