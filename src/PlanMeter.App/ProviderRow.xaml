@@ -4,56 +4,55 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignWidth="240">
+             d:DesignWidth="302">
 
-    <!-- D-23 — the Phase-1 row chrome, extracted UNCHANGED into a reusable user control
-         (not redesigned). MainWindow stacks one ProviderRow per registered provider in
-         registry order. The row renders ONLY its own store slot (PROV-02/row-isolation). -->
+    <!-- D-23 / LAY-03 — the PlanMeter B single-row chrome. Fixed 26 DIP height
+         includes the 1 DIP bottom stroke (last row thickness 0). Widths cite
+         WidgetLayout.* (Core.Presentation); a later x:Static pass can bind them. -->
     <Border x:Name="BottomDivider"
+            Height="26"
             BorderBrush="{DynamicResource Brush.Divider}"
             BorderThickness="0,0,0,0">
         <StackPanel Orientation="Vertical">
 
-            <!-- ROW (outer Grid). DragRegion = provider + figure area only; chip and
+            <!-- ROW (outer Grid). Columns: DragRegion 231 | gap 6 | Chip 37 | gap 6 | Reset 22
+                 = 302 content (WidgetLayout.DragRegionWidth / ChipW / ResetW / ColGap).
+                 DragRegion = provider name + bar + number only (REG-02); chip and
                  timestamp live OUTSIDE DragRegion so clicks there never initiate a drag.
-                 Phase 3 (03-03): the per-row hover affordance + mini-menu are RETIRED —
-                 rows are display-only; key management lives in the settings window (D-01). -->
+                 SharedSizeGroup is gone (T-13-02) — fixed widths + TextTrimming. -->
             <Grid x:Name="RowOuter">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" SharedSizeGroup="WindowChip" />
-                    <ColumnDefinition Width="Auto" SharedSizeGroup="ResetTime" />
+                    <ColumnDefinition Width="231" />
+                    <ColumnDefinition Width="37" />
+                    <ColumnDefinition Width="22" />
                 </Grid.ColumnDefinitions>
 
-                <!-- DRAG region: provider-name + figure area. DragMove fires ONLY from
-                     here (WIDGET-02/drag; UI-SPEC §Drag region). The widget-global
-                     right-click menu (Refresh now / About / Settings… / Quit) is attached
-                     by MainWindow per row (code-built, handlers on MainWindow) so
-                     right-click on any row's drag region opens it. -->
+                <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
+                     here (WIDGET-02/drag; UI-SPEC §Drag region). Nested fixed columns:
+                     Name 87 | gap 6 | Bar 72 | gap 6 | Number 60 = 231
+                     (WidgetLayout.NameW/BarW/NumberW/ColGap/DragRegionWidth). -->
                 <Grid x:Name="DragRegion"
                       Grid.Column="0"
                       Background="Transparent"
                       Cursor="SizeAll"
                       MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="ProviderName" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="87" />
+                        <ColumnDefinition Width="72" />
+                        <ColumnDefinition Width="60" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- Provider name + the persistent qualifier badge (F1/UI-SPEC — the
-                         generalized Demo-badge slot). The badge sits immediately to the
-                         right of the provider name; its Visibility + Text come from the
-                         adapter manifest's QualifierText (set in code-behind), NOT from a
-                         render state — it persists across loading / ok / error, the
-                         constant disambiguator (e.g. ESTIMATED for a header-derived figure).
-                         The badge sits OUTSIDE DragRegion's hit-target contract. -->
+                    <!-- Provider name + the persistent qualifier badge (F1/UI-SPEC).
+                         Badge Visibility + Text come from the adapter manifest
+                         QualifierText (code-behind), NOT from a render state. -->
                     <StackPanel Grid.Column="0"
                                 Orientation="Horizontal"
-                                VerticalAlignment="Center"
-                                Margin="0,0,12,0">
+                                VerticalAlignment="Center">
                         <TextBlock x:Name="ProviderText"
                                    Text="Z.ai"
-                                   Style="{StaticResource TextBodyStyle}"
+                                   FontSize="{StaticResource Text.Name.Size}"
+                                   FontWeight="Regular"
+                                   FontFamily="{StaticResource FontFamily.App}"
                                    Foreground="{DynamicResource Brush.OnSurface}"
                                    VerticalAlignment="Center"
                                    TextWrapping="NoWrap"
@@ -63,37 +62,42 @@
                                 Background="{DynamicResource Brush.Surface.Elevated}"
                                 BorderBrush="{DynamicResource Brush.Divider}"
                                 VerticalAlignment="Center"
-                                Margin="8,0,0,0"
+                                Margin="4,0,0,0"
                                 Visibility="Collapsed"
                                 AutomationProperties.Name="Estimated figure">
                             <TextBlock x:Name="QualifierBadgeText"
                                        Text="ESTIMATED"
-                                       Style="{StaticResource TextLabelStyle}"
+                                       Style="{StaticResource TextMutedStyle}"
                                        Foreground="{DynamicResource Brush.OnSurface.Dimmed}" />
                         </Border>
                     </StackPanel>
 
-                    <!-- Figure + loading affordance share column 1; only one is visible.
-                         G-08-2 — no right margin here; the 8 DIP pre-chip gap lives on
-                         ChipBorder so it is outside DragRegion / SizeAll. -->
-                    <Grid Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                    <!-- Figure + loading affordance share the 72 DIP bar column
+                         (WidgetLayout.BarW). Gaps come from cell margins. -->
+                    <Grid Grid.Column="1"
+                          Margin="6,0,0,0"
+                          VerticalAlignment="Center"
+                          HorizontalAlignment="Stretch">
                         <!-- Display figure (terminal states). Live Ok/NearLimit hide this
-                             and show QuotaBar instead (UIR-01 — no on-row percent). -->
+                             and show QuotaBar instead (UIR-01 — no on-row percent).
+                             Phase 14 wires "剩余 xx%" here; the 60 DIP number column
+                             is intentionally empty until then. -->
                         <TextBlock x:Name="FigureText"
                                    Text="—"
-                                   Style="{StaticResource TextDisplayStyle}"
+                                   FontSize="{StaticResource Text.Percent.Size}"
+                                   FontWeight="Medium"
+                                   FontFamily="{StaticResource FontFamily.App}"
                                    Foreground="{DynamicResource Brush.Accent}"
                                    VerticalAlignment="Center"
                                    HorizontalAlignment="Right"
                                    Cursor="Arrow"
                                    AutomationProperties.LiveSetting="Polite" />
 
-                        <!-- UIR-01 remaining-quota meter (3 DIP track/fill Borders).
-                             Fill fraction is RemainingPct via star columns — not a
-                             ProgressBar (RangeBase Maximum defaults to 1). -->
+                        <!-- UIR-01 remaining-quota meter. Height 4 / CornerRadius 3
+                             (WidgetLayout.BarHeight / BarRadius). Track is Brush.QuotaTrack
+                             (new B token); fill is Accent/NearLimit/Dimmed from code. -->
                         <Grid x:Name="QuotaBar"
-                              Height="3"
-                              MinWidth="36"
+                              Height="4"
                               Visibility="Collapsed"
                               Cursor="Arrow"
                               VerticalAlignment="Center"
@@ -104,14 +108,14 @@
                             </Grid.ColumnDefinitions>
                             <Border x:Name="QuotaTrack"
                                     Grid.ColumnSpan="2"
-                                    Height="3"
-                                    Background="{DynamicResource Brush.Divider}"
-                                    CornerRadius="1" />
+                                    Height="4"
+                                    Background="{DynamicResource Brush.QuotaTrack}"
+                                    CornerRadius="3" />
                             <Border x:Name="QuotaFill"
                                     Grid.Column="0"
-                                    Height="3"
+                                    Height="4"
                                     Background="{DynamicResource Brush.Accent}"
-                                    CornerRadius="1" />
+                                    CornerRadius="3" />
                         </Grid>
 
                         <!-- WIDGET-03/loading — indeterminate ProgressBar replacing the
@@ -119,7 +123,7 @@
                              exists yet. Reduced-motion collapses this to the static glyph. -->
                         <ProgressBar x:Name="LoadingProgress"
                                      IsIndeterminate="True"
-                                     Height="3"
+                                     Height="4"
                                      HorizontalAlignment="Stretch"
                                      VerticalAlignment="Center"
                                      Visibility="Collapsed" />
@@ -128,52 +132,68 @@
                              a static "…" glyph in place of the animated ProgressBar. -->
                         <TextBlock x:Name="LoadingGlyph"
                                    Text="…"
-                                   Style="{StaticResource TextDisplayStyle}"
+                                   FontSize="{StaticResource Text.Percent.Size}"
+                                   FontWeight="Medium"
+                                   FontFamily="{StaticResource FontFamily.App}"
                                    Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
                                    VerticalAlignment="Center"
                                    HorizontalAlignment="Right"
                                    Visibility="Collapsed" />
                     </Grid>
+
+                    <!-- Number column (60 DIP, WidgetLayout.NumberW). Phase 14 paints
+                         "剩余 xx%" here; Ok path leaves it empty until then (decision 1).
+                         Host kept so the column has a stable child for measure. -->
+                    <Border Grid.Column="2"
+                            Margin="6,0,0,0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Stretch"
+                            Background="Transparent" />
                 </Grid>
 
                 <!-- Window-type chip (outside DragRegion — clicking the chip never drags).
-                     DATA-02/all-windows-tooltip — ToolTip is set imperatively from Render
-                     to a StackPanel listing every parsed window. -->
+                     Fill-only (no border), radius 3, padding ~4,1 so the content fits the
+                     25/26 DIP child area (research Risk 4). WidgetLayout.ChipW = 37.
+                     DATA-02/all-windows-tooltip — ToolTip is set imperatively from Render. -->
                 <Border x:Name="ChipBorder"
                         Grid.Column="1"
+                        Margin="6,0,0,0"
                         Background="{DynamicResource Brush.Surface.Elevated}"
-                        BorderBrush="{DynamicResource Brush.Divider}"
-                        BorderThickness="1"
-                        CornerRadius="2"
-                        Padding="6,4"
-                        MinHeight="20"
+                        CornerRadius="3"
+                        Padding="4,1"
                         Visibility="Collapsed"
                         HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch"
-                        Cursor="Arrow"
-                        Margin="8,0,8,0">
+                        VerticalAlignment="Center"
+                        Cursor="Arrow">
                     <TextBlock x:Name="ChipText"
                                Text="5H"
-                               Style="{StaticResource TextLabelStyle}"
+                               Style="{StaticResource TextMutedStyle}"
                                Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
                                HorizontalAlignment="Center"
-                               TextWrapping="NoWrap" />
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis" />
                 </Border>
 
-                <!-- Timestamp (outside DragRegion — clicking the timestamp never drags) -->
+                <!-- Timestamp (outside DragRegion — clicking the timestamp never drags).
+                     Fixed 22 DIP reset column (WidgetLayout.ResetW). -->
                 <TextBlock x:Name="TimestampText"
                            Grid.Column="2"
+                           Margin="6,0,0,0"
                            Text=""
-                           Style="{StaticResource TextLabelStyle}"
+                           Style="{StaticResource TextMutedStyle}"
                            Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
                            VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
                            TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis"
                            Visibility="Collapsed" />
             </Grid>
 
             <!-- STALE / ERROR / NO KEY / RE-LOGIN / UNSUPPORTED state badge (kept
-                 independent of the chip; collapsed by default). LiveSetting=Polite so
-                 Narrator announces state transitions without interrupting. -->
+                 independent of the chip; collapsed by default). Ok/NearLimit already
+                 collapse it so those rows measure exactly 26. Phase 14 folds badge
+                 content into the row — Error/NotLoggedIn/Unsupported may still exceed
+                 26 until then (expected). -->
             <Border x:Name="StateBadge"
                     Style="{StaticResource StateBadgeStyle}"
                     HorizontalAlignment="Left"
@@ -182,7 +202,7 @@
                     AutomationProperties.LiveSetting="Polite">
                 <TextBlock x:Name="StateBadgeText"
                            Text=""
-                           Style="{StaticResource TextLabelStyle}"
+                           Style="{StaticResource TextMutedStyle}"
                            Foreground="{DynamicResource Brush.OnSurface.Dimmed}" />
             </Border>
         </StackPanel>

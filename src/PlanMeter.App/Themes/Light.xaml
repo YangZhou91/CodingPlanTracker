@@ -2,9 +2,9 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- PlanMeter B light tokens. Phase 13: Generic.xaml ThemeDictionaries maps
-         Light + Default → this file. Key names are the existing Brush.* set plus
-         the new Brush.QuotaTrack. Do not rename any key (T-13-01). -->
+    <!-- PlanMeter B light tokens. Merged by Generic.xaml (no x:Key). Key names are
+         the existing Brush.* set plus the new Brush.QuotaTrack.
+         Do not rename any key (T-13-01). -->
     <SolidColorBrush x:Key="Brush.Surface" Color="#F8FAF9" />
     <SolidColorBrush x:Key="Brush.Surface.Elevated" Color="#EEF2EF" />
     <SolidColorBrush x:Key="Brush.Accent" Color="#23764B" />

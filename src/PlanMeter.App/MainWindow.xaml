@@ -13,8 +13,9 @@
         ShowInTaskbar="True"
         SizeToContent="WidthAndHeight"
         Background="{DynamicResource Brush.Surface}"
-        MinWidth="240"
+        MinWidth="320"
         SizeChanged="Window_SizeChanged">
+    <!-- MinWidth 320 = WidgetLayout.WindowWidth (content 302 + pad 16 + border 2). -->
 
     <!-- D-24 widget-global ContextMenu (right-click on the drag region of ANY row):
          Refresh now / [conditional: Open {Provider} console] / separator / About
@@ -39,13 +40,20 @@
          Collapsed↔Visible as a StackPanel sibling grew/shrunk the HWND by 6 DIP on
          every DragRegion enter/leave (flicker when sweeping SizeAll across rows). -->
     <Grid>
-        <Border Padding="12,8,12,8">
+        <Border BorderThickness="1"
+                CornerRadius="7"
+                Padding="8,6"
+                Background="{DynamicResource Brush.Surface}"
+                BorderBrush="{DynamicResource Brush.Divider}">
+            <!-- B chrome: border 1 / corner 7 / pad 8,6 (WidgetLayout Border/CornerRadius/PadH/PadV).
+                 Width = 2 + 16 + 302 = 320; height = 2 + 12 + 26×N (5 rows → 144). -->
             <StackPanel Orientation="Vertical">
 
             <!-- D-23 — row stack. One ProviderRow per enabled provider, in registry order,
                  separated by 1 DIP Brush.Divider strokes (applied to non-last rows in code).
-                 Each row renders ONLY its own store slot (PROV-02/row-isolation, D-14). -->
-            <StackPanel x:Name="RowStack" Orientation="Vertical" Grid.IsSharedSizeScope="True" />
+                 Each row renders ONLY its own store slot (PROV-02/row-isolation, D-14).
+                 Fixed columns replace SharedSizeGroup (T-13-02 / LAY-04). -->
+            <StackPanel x:Name="RowStack" Orientation="Vertical" />
 
             <!-- WIDGET-02/empty-stack + Phase-3 W8 re-entry — when every provider is
                  disabled (the user toggled them all off, or no keyed provider is
@@ -76,7 +84,7 @@
                     BorderBrush="{DynamicResource Brush.Divider}"
                     BorderThickness="0,1,0,0"
                     Padding="12,8,12,8"
-                    Margin="0,8,-12,-8"
+                    Margin="0,8,-8,-6"
                     Visibility="Collapsed">
                 <TextBlock x:Name="AboutText"
                            Text="PlanMeter v1.0"
@@ -92,7 +100,7 @@
                 Width="6" Height="4"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
-                Margin="12,8,0,0"
+                Margin="8,6,0,0"
                 Opacity="0"
                 IsHitTestVisible="False">
             <Ellipse Width="1" Height="1" Canvas.Left="0" Canvas.Top="0" Fill="{DynamicResource Brush.OnSurface.Dimmed}"/>
