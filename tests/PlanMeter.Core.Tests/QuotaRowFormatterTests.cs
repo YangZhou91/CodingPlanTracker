@@ -208,7 +208,7 @@ public sealed class QuotaRowFormatterTests
         string line = QuotaRowFormatter.FormatTooltipLine(window, now);
         string expectedStamp = reset.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
-        line.Should().Be($"WEEK: 26% used · resets {expectedStamp}");
+        line.Should().Be($"WEEK: 74% remaining / 26% used · resets {expectedStamp}");
         line.Should().NotContain("Estimated");
     }
 
@@ -220,7 +220,7 @@ public sealed class QuotaRowFormatterTests
 
         string line = QuotaRowFormatter.FormatTooltipLine(window, now);
 
-        line.Should().Be("CRED: 10% used");
+        line.Should().Be("CRED: 90% remaining / 10% used");
         line.Should().NotContain("resets");
         line.Should().NotContain("Estimated");
     }
@@ -233,7 +233,7 @@ public sealed class QuotaRowFormatterTests
 
         string line = QuotaRowFormatter.FormatTooltipLine(window, now);
 
-        line.Should().Be("5H: 40% used");
+        line.Should().Be("5H: 60% remaining / 40% used");
         line.Should().NotContain("resets");
         line.Should().NotContain("Estimated");
     }
@@ -246,5 +246,141 @@ public sealed class QuotaRowFormatterTests
         QuotaRowFormatter.ChipLabel(WindowKind.Weekly).Should().Be("WEEK");
         QuotaRowFormatter.ChipLabel(WindowKind.Monthly).Should().Be("MONTH");
         QuotaRowFormatter.ChipLabel(WindowKind.Credits).Should().Be("CRED");
+    }
+
+    // ── DAT-01 / DAT-06 — remaining label/value ──────────────────────────────
+
+    [Fact]
+    public void RemainingPrefix_is_Chinese_remaining()
+    {
+        QuotaRowFormatter.RemainingPrefix.Should().Be("剩余");
+    }
+
+    [Fact]
+    public void FormatRemainingLabel_100_is_full()
+    {
+        QuotaRowFormatter.FormatRemainingLabel(100).Should().Be("剩余 100%");
+    }
+
+    [Fact]
+    public void FormatRemainingLabel_0_is_zero()
+    {
+        QuotaRowFormatter.FormatRemainingLabel(0).Should().Be("剩余 0%");
+    }
+
+    [Fact]
+    public void FormatRemainingLabel_62_4_rounds_to_62()
+    {
+        QuotaRowFormatter.FormatRemainingLabel(62.4).Should().Be("剩余 62%");
+    }
+
+    [Fact]
+    public void FormatRemainingLabel_20_is_twenty()
+    {
+        QuotaRowFormatter.FormatRemainingLabel(20).Should().Be("剩余 20%");
+    }
+
+    [Fact]
+    public void FormatRemainingLabel_null_is_null()
+    {
+        QuotaRowFormatter.FormatRemainingLabel(null).Should().BeNull();
+    }
+
+    [Fact]
+    public void FormatRemainingLabel_NaN_is_null()
+    {
+        QuotaRowFormatter.FormatRemainingLabel(double.NaN).Should().BeNull();
+    }
+
+    [Fact]
+    public void FormatRemainingLabel_Infinity_is_null()
+    {
+        QuotaRowFormatter.FormatRemainingLabel(double.PositiveInfinity).Should().BeNull();
+        QuotaRowFormatter.FormatRemainingLabel(double.NegativeInfinity).Should().BeNull();
+    }
+
+    [Fact]
+    public void FormatRemainingValue_matches_label_suffix()
+    {
+        QuotaRowFormatter.FormatRemainingValue(100).Should().Be("100%");
+        QuotaRowFormatter.FormatRemainingValue(0).Should().Be("0%");
+        QuotaRowFormatter.FormatRemainingValue(62.4).Should().Be("62%");
+        QuotaRowFormatter.FormatRemainingValue(20).Should().Be("20%");
+        QuotaRowFormatter.FormatRemainingValue(null).Should().BeNull();
+        QuotaRowFormatter.FormatRemainingValue(double.NaN).Should().BeNull();
+    }
+
+    // ── DAT-05 — unrounded IsLow ─────────────────────────────────────────────
+
+    [Fact]
+    public void IsLow_20_is_true()
+    {
+        QuotaRowFormatter.IsLow(20).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsLow_20_point_0001_is_false()
+    {
+        QuotaRowFormatter.IsLow(20.0001).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsLow_19_point_999_is_true()
+    {
+        QuotaRowFormatter.IsLow(19.999).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsLow_0_is_true()
+    {
+        QuotaRowFormatter.IsLow(0).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsLow_NaN_is_false()
+    {
+        QuotaRowFormatter.IsLow(double.NaN).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsLow_Infinity_is_false()
+    {
+        QuotaRowFormatter.IsLow(double.PositiveInfinity).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsLow_null_is_false()
+    {
+        QuotaRowFormatter.IsLow(null).Should().BeFalse();
+    }
+
+    // ── ROW-08 — chip + stale suffix ─────────────────────────────────────────
+
+    [Fact]
+    public void ChipWithStaleSuffix_WEEK_true_is_WEEK_dot_old()
+    {
+        QuotaRowFormatter.ChipWithStaleSuffix(WindowKind.Weekly, true).Should().Be("WEEK · 旧");
+    }
+
+    [Fact]
+    public void ChipWithStaleSuffix_WEEK_false_is_WEEK()
+    {
+        QuotaRowFormatter.ChipWithStaleSuffix(WindowKind.Weekly, false).Should().Be("WEEK");
+    }
+
+    [Fact]
+    public void ChipWithStaleSuffix_5H_true_is_5H_dot_old()
+    {
+        QuotaRowFormatter.ChipWithStaleSuffix(WindowKind.FiveHour, true).Should().Be("5H · 旧");
+    }
+
+    // ── DAT-07 — FormatLastUpdateLine ────────────────────────────────────────
+
+    [Fact]
+    public void FormatLastUpdateLine_exact_local_stamp()
+    {
+        var fetchedAtUtc = DateTimeOffset.Parse("2026-09-14T18:40:00Z", CultureInfo.InvariantCulture);
+        string expected = $"Updated {fetchedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
+        QuotaRowFormatter.FormatLastUpdateLine(fetchedAtUtc).Should().Be(expected);
     }
 }

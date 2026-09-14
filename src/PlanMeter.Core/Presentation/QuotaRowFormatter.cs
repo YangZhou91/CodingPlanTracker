@@ -112,4 +112,22 @@ public static class QuotaRowFormatter
 
         return line;
     }
+
+    // ── DAT-01 / DAT-06 — remaining label/value (stubs — RED) ───────────────
+
+    public const string RemainingPrefix = "剩余";
+
+    public static string? FormatRemainingLabel(double? remainingPct) => null;
+
+    public static string? FormatRemainingValue(double? remainingPct) => null;
+
+    public static bool IsLow(double? remainingPct) => false;
+
+    // ── ROW-08 — chip + stale suffix (stubs — RED) ──────────────────────────
+
+    public static string ChipWithStaleSuffix(WindowKind kind, bool stale) => ChipLabel(kind);
+
+    // ── DAT-07 — last-update line (stubs — RED) ─────────────────────────────
+
+    public static string FormatLastUpdateLine(DateTimeOffset fetchedAtUtc) => string.Empty;
 }

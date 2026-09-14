@@ -67,8 +67,8 @@ public sealed class WindowReadingsTests
             .ToList();
 
         lines.Should().HaveCount(2);
-        lines[0].Should().StartWith("5H: 4% used");
-        lines[1].Should().StartWith("WEEK: 2% used");
+        lines[0].Should().StartWith("5H: 96% remaining / 4% used");
+        lines[1].Should().StartWith("WEEK: 98% remaining / 2% used");
         lines.Should().OnlyHaveUniqueItems();
     }
 }
