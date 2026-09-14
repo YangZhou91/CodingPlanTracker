@@ -15,21 +15,23 @@
             BorderThickness="0,0,0,0">
         <StackPanel Orientation="Vertical">
 
-            <!-- ROW (outer Grid). Columns: DragRegion 231 | gap 6 | Chip 37 | gap 6 | Reset 22
+            <!-- ROW (outer Grid). Columns: DragRegion 219 | gap 6 | Chip 45 | gap 6 | Reset 26
                  = 302 content (WidgetLayout.DragRegionWidth / ChipW / ResetW / ColGap).
+                 Applied widths are font-measured: chip +8 from bar (WEEK/MONTH), reset +4
+                 from number ("now"). bar+chip stays 109; window stays 320.
                  DragRegion = provider name + bar + number only (REG-02); chip and
                  timestamp live OUTSIDE DragRegion so clicks there never initiate a drag.
                  SharedSizeGroup is gone (T-13-02) — fixed widths + TextTrimming. -->
             <Grid x:Name="RowOuter">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="231" />
-                    <ColumnDefinition Width="37" />
-                    <ColumnDefinition Width="22" />
+                    <ColumnDefinition Width="219" />
+                    <ColumnDefinition Width="45" />
+                    <ColumnDefinition Width="26" />
                 </Grid.ColumnDefinitions>
 
                 <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
                      here (WIDGET-02/drag; UI-SPEC §Drag region). Nested fixed columns:
-                     Name 87 | gap 6 | Bar 72 | gap 6 | Number 60 = 231
+                     Name 87 | gap 6 | Bar 64 | gap 6 | Number 56 = 219
                      (WidgetLayout.NameW/BarW/NumberW/ColGap/DragRegionWidth). -->
                 <Grid x:Name="DragRegion"
                       Grid.Column="0"
@@ -38,8 +40,8 @@
                       MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="87" />
-                        <ColumnDefinition Width="72" />
-                        <ColumnDefinition Width="60" />
+                        <ColumnDefinition Width="64" />
+                        <ColumnDefinition Width="56" />
                     </Grid.ColumnDefinitions>
 
                     <!-- Provider name + the persistent qualifier badge (F1/UI-SPEC).
@@ -72,7 +74,7 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Figure + loading affordance share the 72 DIP bar column
+                    <!-- Figure + loading affordance share the applied 64 DIP bar column
                          (WidgetLayout.BarW). Gaps come from cell margins. -->
                     <Grid Grid.Column="1"
                           Margin="6,0,0,0"
@@ -141,7 +143,7 @@
                                    Visibility="Collapsed" />
                     </Grid>
 
-                    <!-- Number column (60 DIP, WidgetLayout.NumberW). Phase 14 paints
+                    <!-- Number column (applied 56 DIP, WidgetLayout.NumberW). Phase 14 paints
                          "剩余 xx%" here; Ok path leaves it empty until then (decision 1).
                          Host kept so the column has a stable child for measure. -->
                     <Border Grid.Column="2"
@@ -152,15 +154,15 @@
                 </Grid>
 
                 <!-- Window-type chip (outside DragRegion — clicking the chip never drags).
-                     Fill-only (no border), radius 3, padding ~4,1 so the content fits the
-                     25/26 DIP child area (research Risk 4). WidgetLayout.ChipW = 37.
+                     Fill-only (no border), radius 3, padding 3,1 so WEEK/MONTH fit the
+                     applied 45 DIP column (WidgetLayout.ChipW, font-measure steal 8).
                      DATA-02/all-windows-tooltip — ToolTip is set imperatively from Render. -->
                 <Border x:Name="ChipBorder"
                         Grid.Column="1"
                         Margin="6,0,0,0"
                         Background="{DynamicResource Brush.Surface.Elevated}"
                         CornerRadius="3"
-                        Padding="4,1"
+                        Padding="3,1"
                         Visibility="Collapsed"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Center"
@@ -175,7 +177,7 @@
                 </Border>
 
                 <!-- Timestamp (outside DragRegion — clicking the timestamp never drags).
-                     Fixed 22 DIP reset column (WidgetLayout.ResetW). -->
+                     Applied 26 DIP reset column (WidgetLayout.ResetW) so "now"/"6d" fit. -->
                 <TextBlock x:Name="TimestampText"
                            Grid.Column="2"
                            Margin="6,0,0,0"

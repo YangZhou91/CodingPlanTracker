@@ -7,6 +7,7 @@ namespace PlanMeter.Core.Tests;
 /// <summary>
 /// LAY-01..04 / THM-05 / THM-06 geometry pins for the PlanMeter B chrome.
 /// Content width 302, window 320×144 at 5 Ok rows, row 26, bar 4/r3, ChipSteal invariant.
+/// Applied columns are font-measured (chip steal 8, reset steal 4) so WEEK/MONTH/now fit.
 /// </summary>
 public sealed class WidgetLayoutTests
 {
@@ -37,9 +38,9 @@ public sealed class WidgetLayoutTests
     }
 
     [Fact]
-    public void DragRegionWidth_is_231()
+    public void DragRegionWidth_is_219()
     {
-        WidgetLayout.DragRegionWidth.Should().Be(231);
+        WidgetLayout.DragRegionWidth.Should().Be(219);
     }
 
     [Fact]
@@ -53,9 +54,26 @@ public sealed class WidgetLayoutTests
     }
 
     [Fact]
-    public void ChipSteal_0_is_default_72_37()
+    public void Applied_chip_width_fits_WEEK_and_MONTH_labels()
     {
-        WidgetLayout.ChipSteal(0).Should().Be((72, 37));
+        // Design chip 37 clipped WEEK at 11 Regular; applied 45 is the font-measure fix.
+        WidgetLayout.ChipW.Should().BeGreaterThanOrEqualTo(45);
+        WidgetLayout.BarW.Should().Be(64);
+        (WidgetLayout.BarW + WidgetLayout.ChipW).Should().Be(109);
+    }
+
+    [Fact]
+    public void Applied_reset_width_fits_now_and_compact_days()
+    {
+        WidgetLayout.ResetW.Should().BeGreaterThanOrEqualTo(26);
+        WidgetLayout.NumberW.Should().Be(56);
+        (WidgetLayout.NumberW + WidgetLayout.ResetW).Should().Be(82);
+    }
+
+    [Fact]
+    public void ChipSteal_0_is_applied_64_45()
+    {
+        WidgetLayout.ChipSteal(0).Should().Be((64, 45));
     }
 
     [Fact]
@@ -64,8 +82,8 @@ public sealed class WidgetLayoutTests
         foreach (double steal in new[] { 1.0, 2.0, 3.0 })
         {
             var (bar, chip) = WidgetLayout.ChipSteal(steal);
-            bar.Should().Be(72 - steal);
-            chip.Should().Be(37 + steal);
+            bar.Should().Be(64 - steal);
+            chip.Should().Be(45 + steal);
             (bar + chip).Should().Be(109, "THM-06 keeps bar+chip at the fixed 109 DIP total");
         }
     }
@@ -73,8 +91,8 @@ public sealed class WidgetLayoutTests
     [Fact]
     public void ChipSteal_clamps_to_0_and_3()
     {
-        WidgetLayout.ChipSteal(-1).Should().Be((72, 37));
-        WidgetLayout.ChipSteal(4).Should().Be((69, 40));
+        WidgetLayout.ChipSteal(-1).Should().Be((64, 45));
+        WidgetLayout.ChipSteal(4).Should().Be((61, 48));
     }
 
     [Fact]

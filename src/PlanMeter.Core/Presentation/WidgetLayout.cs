@@ -5,7 +5,12 @@ namespace PlanMeter.Core.Presentation;
 /// No WPF types: XAML sites cite these constants in comments; a later x:Static pass
 /// can bind them without touching the formulas.
 ///
-/// Width formula:  border(2) + pad(16) + cols(87+72+60+37+22=278) + gaps(6×4=24) = 320
+/// Design base was Bar 72 / Chip 37 / Number 60 / Reset 22. Live Segoe UI measure at
+/// 11 Regular clipped "WEEK"→"W..." and "now"→"n...". Applied widths steal 8 DIP
+/// from the bar for the chip and 4 DIP from the number column for reset; bar+chip
+/// stays 109 and the 320 window formula is unchanged (THM-06 font-measure path).
+///
+/// Width formula:  border(2) + pad(16) + cols(87+64+56+45+26=278) + gaps(6×4=24) = 320
 /// Height formula: border(2) + pad(12) + rows(26×N); N=5 → 144
 /// </summary>
 public static class WidgetLayout
@@ -17,10 +22,14 @@ public static class WidgetLayout
     public const double RowHeight = 26;
     public const double ColGap = 6;
     public const double NameW = 87;
-    public const double BarW = 72;
-    public const double NumberW = 60;
-    public const double ChipW = 37;
-    public const double ResetW = 22;
+    /// <summary>Applied bar column (design 72 − 8 steal).</summary>
+    public const double BarW = 64;
+    /// <summary>Applied number column (design 60 − 4 steal for reset).</summary>
+    public const double NumberW = 56;
+    /// <summary>Applied chip column (design 37 + 8 steal) so WEEK/MONTH fit.</summary>
+    public const double ChipW = 45;
+    /// <summary>Applied reset column (design 22 + 4 steal) so "now"/"6d" fit.</summary>
+    public const double ResetW = 26;
     public const double BarHeight = 4;
     public const double BarRadius = 3;
     public const int StandardRowCount = 5;
@@ -37,13 +46,13 @@ public static class WidgetLayout
     public static double WindowHeight(int rows) =>
         rows * RowHeight + 2 * PadV + 2 * Border;
 
-    /// <summary>Name + gap + bar + gap + number = 231 (REG-02 drag hit target).</summary>
+    /// <summary>Name + gap + bar + gap + number = 219 (REG-02 drag hit target).</summary>
     public static double DragRegionWidth =>
         NameW + ColGap + BarW + ColGap + NumberW;
 
     /// <summary>
-    /// THM-06 — steal 0..3 DIP from the bar column for the chip so "MONTH" can fit
-    /// without changing the 109 DIP bar+chip total. Default callers use 0.
+    /// THM-06 — further steal 0..3 DIP from the applied bar column for the chip.
+    /// bar+chip stays 109. Callers use 0 (applied 64/45 already font-measured).
     /// </summary>
     public static (double bar, double chip) ChipSteal(double steal)
     {
