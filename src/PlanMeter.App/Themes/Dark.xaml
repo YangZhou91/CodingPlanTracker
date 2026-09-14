@@ -1,0 +1,19 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- PlanMeter B dark tokens. Phase 13: compiled via Generic.xaml ThemeDictionaries
+         Dark key; not user-switchable until Phase 15. Same 11 Brush.* keys as Light. -->
+    <SolidColorBrush x:Key="Brush.Surface" Color="#222724" />
+    <SolidColorBrush x:Key="Brush.Surface.Elevated" Color="#303A33" />
+    <SolidColorBrush x:Key="Brush.Accent" Color="#88D3A4" />
+    <SolidColorBrush x:Key="Brush.NearLimit" Color="#F3BD65" />
+    <SolidColorBrush x:Key="Brush.Error" Color="#FFB4AB" />
+    <SolidColorBrush x:Key="Brush.OnSurface" Color="#EDF4EF" />
+    <SolidColorBrush x:Key="Brush.OnSurface.Dimmed" Color="#B2C1B6" />
+    <SolidColorBrush x:Key="Brush.Dimmed" Color="#A7B4AB" />
+    <SolidColorBrush x:Key="Brush.Divider" Color="#414C45" />
+    <SolidColorBrush x:Key="Brush.QuotaTrack" Color="#3C4840" />
+    <SolidColorBrush x:Key="Brush.FocusRing" Color="#88D3A4" Opacity="0.6" />
+
+</ResourceDictionary>

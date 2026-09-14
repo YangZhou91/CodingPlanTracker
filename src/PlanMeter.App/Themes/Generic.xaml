@@ -3,6 +3,18 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
+    <!-- Color brushes live in Light.xaml / Dark.xaml (design B tokens).
+         Phase 13 wiring: merge Light.xaml WITHOUT an x:Key so its keys paint as
+         normal application resources. ThemeDictionaries was the research Option A
+         target, but ResourceDictionary.ThemeDictionaries is
+         DesignerSerializationVisibility.Hidden and MC3074-rejects the property
+         element in a Page-compiled app dictionary (see 13-01-SUMMARY deviation).
+         Dark.xaml is still a compiled Page; Phase 15 swaps the merged entry at
+         runtime for user-controlled theme persistence. -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Light.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
     <!-- Spacing Scale (UI-SPEC §Spacing Scale). All values DIP at 96 DPI baseline. -->
     <sys:Double x:Key="Space.Xs">4</sys:Double>
     <sys:Double x:Key="Space.Sm">8</sys:Double>
@@ -15,25 +27,14 @@
     <sys:Double x:Key="Space.3Xl">48</sys:Double>
     <sys:Double x:Key="Space.Touch">44</sys:Double>
 
-    <!-- Typography (UI-SPEC §Typography). -->
+    <!-- Typography (UI-SPEC §Typography). Name/percent sizes are the B plan tokens
+         (THM-04): provider name 12 Regular, figure/percent 13 Medium. -->
     <FontFamily x:Key="FontFamily.App">Segoe UI Variable Text, Segoe UI</FontFamily>
     <sys:Double x:Key="Text.Display.Size">20</sys:Double>
     <sys:Double x:Key="Text.Body.Size">13</sys:Double>
     <sys:Double x:Key="Text.Label.Size">11</sys:Double>
-
-    <!-- Color brushes (UI-SPEC §Color) — Light/Dark pairs. Phase-1 minimal viable
-         swap: the app renders with the LIGHT pair by default. Plan 01-02 wires the
-         ThemeDictionary/ResourceDictionary swap keyed off SystemParameters. -->
-    <SolidColorBrush x:Key="Brush.Surface" Color="#F5F5F5" />
-    <SolidColorBrush x:Key="Brush.Surface.Elevated" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="Brush.Accent" Color="#0E7A4A" />
-    <SolidColorBrush x:Key="Brush.NearLimit" Color="#C47A00" />
-    <SolidColorBrush x:Key="Brush.Error" Color="#B3261E" />
-    <SolidColorBrush x:Key="Brush.OnSurface" Color="#1A1A1A" />
-    <SolidColorBrush x:Key="Brush.OnSurface.Dimmed" Color="#5A5A5A" />
-    <SolidColorBrush x:Key="Brush.Dimmed" Color="#8A8A8A" />
-    <SolidColorBrush x:Key="Brush.Divider" Color="#E0E0E0" />
-    <SolidColorBrush x:Key="Brush.FocusRing" Color="#0E7A4A" Opacity="0.6" />
+    <sys:Double x:Key="Text.Name.Size">12</sys:Double>
+    <sys:Double x:Key="Text.Percent.Size">13</sys:Double>
 
     <!-- Convenience styles -->
     <Style x:Key="TextDisplayStyle" TargetType="TextBlock">
@@ -52,6 +53,14 @@
         <Setter Property="FontFamily" Value="{StaticResource FontFamily.App}" />
         <Setter Property="FontSize" Value="{StaticResource Text.Label.Size}" />
         <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- THM-04 / decision 5 — row period / reset / chip / badge text is 11 Regular.
+         A sibling of TextLabelStyle so settings labels keep their SemiBold weight. -->
+    <Style x:Key="TextMutedStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamily.App}" />
+        <Setter Property="FontSize" Value="{StaticResource Text.Label.Size}" />
+        <Setter Property="FontWeight" Value="Regular" />
     </Style>
 
     <!-- State badges (STALE / ERROR / NO KEY / RE-LOGIN / UNSUPPORTED) — Label-size,
