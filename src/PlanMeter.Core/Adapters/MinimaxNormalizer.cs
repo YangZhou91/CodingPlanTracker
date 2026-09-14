@@ -153,7 +153,10 @@ public static class MinimaxNormalizer
 
         if (envelope.ModelRemains is { Count: > 0 } entries)
         {
-            foreach (var entry in entries)
+            // Coding-plan quota lives on model_name "general". "video" (and any future
+            // sibling) is a separate product meter that would otherwise emit a second
+            // FiveHour + Weekly pair — the 4-line tooltip with two 5H chips.
+            foreach (var entry in SelectCodingPlanEntries(entries))
             {
                 // Extract interval (FiveHour) window
                 if (entry.CurrentIntervalRemainingPercent.HasValue)
@@ -178,6 +181,8 @@ public static class MinimaxNormalizer
                 }
             }
         }
+
+        windows = WindowReadings.DistinctMostBindingByKind(windows).ToList();
 
         if (windows.Count == 0)
         {
@@ -213,6 +218,20 @@ public static class MinimaxNormalizer
             MostBindingWindow: mostBinding.Kind,
             AllWindows: windows,
             ErrorMessage: null);
+    }
+
+    /// <summary>
+    /// Prefer the coding-plan <c>general</c> model when MiniMax reports several
+    /// <c>model_name</c> rows. If none is named general (renamed payload / video-only),
+    /// keep every entry so we do not go blank.
+    /// </summary>
+    private static IEnumerable<MinimaxModelEntry> SelectCodingPlanEntries(
+        IReadOnlyList<MinimaxModelEntry> entries)
+    {
+        var general = entries
+            .Where(e => string.Equals(e.ModelName, "general", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        return general.Count > 0 ? general : entries;
     }
 
     /// <summary>Tie-break priority — lower wins. Rolling (0) &lt; FiveHour (1) &lt; Weekly (2) &lt; Monthly (3). Matches OpenCodeNormalizer.</summary>

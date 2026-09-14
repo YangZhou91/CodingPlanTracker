@@ -36,13 +36,11 @@ public sealed class MinimaxNormalizerTests
     ///   Entry "general":
     ///     interval: current_interval_remaining_percent = 96 -> UsedPct = 100 - 96 = 4
     ///     weekly:   current_weekly_remaining_percent = 98 -> UsedPct = 100 - 98 = 2
-    ///   Entry "video":
-    ///     interval: current_interval_remaining_percent = 100 -> UsedPct = 0
-    ///     weekly:   current_weekly_remaining_percent = 100 -> UsedPct = 0
+    ///   Entry "video" is a sibling product meter (interval/weekly remaining 100).
+    ///   The coding-plan widget keeps only "general", so AllWindows = 2 (one 5H + one WEEK).
     ///
     /// Most-binding window = argmin(remaining) -> general interval 96% remaining (lowest)
     /// -> UsedPct = 4, RemainingPct = 96, MostBindingWindow = FiveHour, Status = Ok (>20).
-    /// All windows = 4 (2 entries x 2 windows each).
     /// </summary>
     [Fact]
     public void Fixture_pin_live_capture_normalizes_correctly()
@@ -63,8 +61,8 @@ public sealed class MinimaxNormalizerTests
             "general interval remaining 96% (REMAINING-semantics)");
         reading.FetchedAtUtc.Should().Be(fetchedAt);
         reading.AllWindows.Should().NotBeNull();
-        reading.AllWindows!.Count.Should().Be(4,
-            "2 entries x 2 windows each = 4 windows total");
+        reading.AllWindows!.Count.Should().Be(2,
+            "coding-plan general only: 1 entry x 2 windows; video is dropped");
         reading.ErrorMessage.Should().BeNull();
     }
 
@@ -183,5 +181,112 @@ public sealed class MinimaxNormalizerTests
         reading.RemainingPct.Should().BeApproximately(20.0, 0.01);
         reading.Status.Should().Be(ReadingStatus.NearLimit,
             "RemainingPct==20 is the NearLimit boundary");
+    }
+
+    /// <summary>
+    /// Root-cause regression: model_remains[] emits one 5H+WEEK per model_name.
+    /// Tooltip labels only by WindowKind, so general+video used to render two 5H chips.
+    /// Oracle: specified (one chip per WindowKind; coding-plan figures from general).
+    /// </summary>
+    [Fact]
+    public void General_and_video_keep_only_general_one_window_per_kind()
+    {
+        string json = LoadFixture("minimax-token-plan-remains.json");
+        UsageReading reading = MinimaxNormalizer.Normalize(json, DateTimeOffset.UtcNow);
+
+        reading.AllWindows.Should().NotBeNull();
+        reading.AllWindows!.Select(w => w.Kind).Should().OnlyHaveUniqueItems();
+        reading.AllWindows.Should().HaveCount(2);
+
+        WindowReading fiveHour = reading.AllWindows.Should()
+            .ContainSingle(w => w.Kind == WindowKind.FiveHour).Subject;
+        fiveHour.UsedPct.Should().BeApproximately(4.0, 0.01,
+            "general interval 4% used — not video 0%");
+        fiveHour.RemainingPct.Should().BeApproximately(96.0, 0.01);
+
+        WindowReading weekly = reading.AllWindows.Should()
+            .ContainSingle(w => w.Kind == WindowKind.Weekly).Subject;
+        weekly.UsedPct.Should().BeApproximately(2.0, 0.01,
+            "general weekly 2% used — not video 0%");
+        weekly.RemainingPct.Should().BeApproximately(98.0, 0.01);
+    }
+
+    /// <summary>
+    /// Boundary: no model_name "general" → keep the reported model rather than going blank.
+    /// </summary>
+    [Fact]
+    public void Video_only_model_remains_is_kept_when_no_general()
+    {
+        string json = /*lang=json,strict*/ """
+        {
+          "model_remains": [
+            {
+              "model_name": "video",
+              "current_interval_remaining_percent": 40,
+              "current_weekly_remaining_percent": 70
+            }
+          ],
+          "base_resp": { "status_code": 0, "status_msg": "success" }
+        }
+        """;
+        UsageReading reading = MinimaxNormalizer.Normalize(json, DateTimeOffset.UtcNow);
+
+        reading.Status.Should().Be(ReadingStatus.Ok);
+        reading.AllWindows.Should().HaveCount(2);
+        reading.AllWindows!.Should().ContainSingle(w => w.Kind == WindowKind.FiveHour && w.UsedPct == 60.0);
+        reading.AllWindows.Should().ContainSingle(w => w.Kind == WindowKind.Weekly && w.UsedPct == 30.0);
+    }
+
+    /// <summary>
+    /// Boundary neighbor: two unnamed/non-general models collapse to one chip per kind
+    /// (most-binding remaining wins) so the tooltip cannot grow a second 5H.
+    /// </summary>
+    [Fact]
+    public void Two_non_general_models_collapse_to_one_window_per_kind()
+    {
+        string json = /*lang=json,strict*/ """
+        {
+          "model_remains": [
+            { "model_name": "video", "current_interval_remaining_percent": 100, "current_weekly_remaining_percent": 100 },
+            { "model_name": "audio", "current_interval_remaining_percent": 80, "current_weekly_remaining_percent": 90 }
+          ],
+          "base_resp": { "status_code": 0, "status_msg": "success" }
+        }
+        """;
+        UsageReading reading = MinimaxNormalizer.Normalize(json, DateTimeOffset.UtcNow);
+
+        reading.AllWindows.Should().HaveCount(2);
+        reading.AllWindows!.Select(w => w.Kind).Should().OnlyHaveUniqueItems();
+        reading.AllWindows.Should().ContainSingle(w => w.Kind == WindowKind.FiveHour && w.RemainingPct == 80.0);
+        reading.AllWindows.Should().ContainSingle(w => w.Kind == WindowKind.Weekly && w.RemainingPct == 90.0);
+        reading.MostBindingWindow.Should().Be(WindowKind.FiveHour);
+        reading.UsedPct.Should().BeApproximately(20.0, 0.01);
+    }
+
+    /// <summary>
+    /// Mutation guard: Kind-collapse alone would pick video when it is tighter.
+    /// Coding-plan figures must stay on general even if video remaining is lower.
+    /// </summary>
+    [Fact]
+    public void General_is_kept_even_when_video_is_more_binding()
+    {
+        string json = /*lang=json,strict*/ """
+        {
+          "model_remains": [
+            { "model_name": "general", "current_interval_remaining_percent": 90, "current_weekly_remaining_percent": 95 },
+            { "model_name": "video", "current_interval_remaining_percent": 10, "current_weekly_remaining_percent": 5 }
+          ],
+          "base_resp": { "status_code": 0, "status_msg": "success" }
+        }
+        """;
+        UsageReading reading = MinimaxNormalizer.Normalize(json, DateTimeOffset.UtcNow);
+
+        reading.AllWindows.Should().HaveCount(2);
+        reading.UsedPct.Should().BeApproximately(10.0, 0.01,
+            "general interval 10% used — not video 90% used");
+        reading.RemainingPct.Should().BeApproximately(90.0, 0.01);
+        reading.MostBindingWindow.Should().Be(WindowKind.FiveHour);
+        reading.AllWindows!.Should().ContainSingle(w => w.Kind == WindowKind.FiveHour && w.RemainingPct == 90.0);
+        reading.AllWindows.Should().ContainSingle(w => w.Kind == WindowKind.Weekly && w.RemainingPct == 95.0);
     }
 }

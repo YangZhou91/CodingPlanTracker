@@ -214,6 +214,8 @@ public static class ZaiNormalizer
             }
         }
 
+        windows = WindowReadings.DistinctMostBindingByKind(windows).ToList();
+
         if (windows.Count == 0)
         {
             // Empty data:{} (or no TOKENS_LIMIT entries) — Q1: map to Ok with null figure.

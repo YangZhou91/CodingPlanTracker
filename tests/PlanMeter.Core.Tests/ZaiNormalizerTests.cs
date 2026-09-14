@@ -386,4 +386,32 @@ public sealed class ZaiNormalizerTests
         under.RemainingPct.Should().Be(100.0);
         under.Status.Should().Be(ReadingStatus.Ok);
     }
+
+    /// <summary>
+    /// Sibling of the MiniMax two-5H tooltip: two TOKENS_LIMIT weekly meters
+    /// (screenshot: WEEK 1% used + WEEK 0% used) must collapse to one WEEK chip.
+    /// Oracle: specified — AllWindows is one row per WindowKind; keep the more-binding weekly.
+    /// </summary>
+    [Fact]
+    public void Duplicate_weekly_tokens_limit_entries_collapse_to_most_binding_weekly()
+    {
+        string json = /*lang=json,strict*/ """
+        {
+          "code": 200, "msg": "ok", "success": true,
+          "data": { "limits": [
+            { "type": "TOKENS_LIMIT", "unit": 3, "percentage": 5 },
+            { "type": "TOKENS_LIMIT", "unit": 6, "percentage": 1 },
+            { "type": "TOKENS_LIMIT", "unit": 6, "percentage": 0 }
+          ] }
+        }
+        """;
+        UsageReading reading = ZaiNormalizer.Normalize(json, DateTimeOffset.UtcNow);
+
+        reading.AllWindows.Should().HaveCount(2);
+        reading.AllWindows!.Select(w => w.Kind).Should().OnlyHaveUniqueItems();
+        reading.AllWindows.Should().ContainSingle(w => w.Kind == WindowKind.FiveHour && w.UsedPct == 5.0);
+        reading.AllWindows.Should().ContainSingle(w => w.Kind == WindowKind.Weekly && w.UsedPct == 1.0,
+            "keep WEEK 1% used (99% remaining), drop WEEK 0% used");
+        reading.MostBindingWindow.Should().Be(WindowKind.FiveHour);
+    }
 }

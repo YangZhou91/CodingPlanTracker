@@ -639,7 +639,7 @@ public partial class ProviderRow : UserControl
         }
 
         var stack = new StackPanel();
-        foreach (var w in all)
+        foreach (var w in WindowReadings.DistinctMostBindingByKind(all))
         {
             // UIR-04 — used% + full local timestamp via FormatTooltipLine; remaining implied.
             // QualifierText-gated estimate line below is left in place (no-op after UIR-03).
