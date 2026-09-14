@@ -26,11 +26,9 @@ namespace PlanMeter.App;
 /// RenderUnsupported / RenderFloor + the STALE path) evaluates the STALE-vs-ERROR
 /// predicate against THIS row's own slot (DATA-03/stale-per-row).
 ///
-/// Phase-4 groundwork (04-02) — the row chrome is fully DATA-DRIVEN, never
-/// provider-name-switched: the state-badge text/tooltip is selected by
-/// (status × auth-family × verdict) from the adapter manifest, the qualifier badge
-/// (the generalized Demo slot) is driven by <see cref="IProviderAdapter.QualifierText"/>,
-/// and the console deep-link URL comes from <see cref="IProviderAdapter.ConsoleUrl"/>.
+/// Phase 14: every ROW-01..09 state is a 26 DIP single-line content swap. Ok/NearLimit/
+/// 0% paint 剩余 xx% via ShowRemaining + QuotaBar; non-figure states paint StatusText
+/// via ShowStatus. No under-row StateBadge, no FigureText, no LoadingProgress.
 /// </summary>
 public partial class ProviderRow : UserControl
 {
@@ -49,9 +47,8 @@ public partial class ProviderRow : UserControl
     /// G-04-4 loading watchdog (04-06 Task 3) — optional timeout for the loading state.
     /// When non-null, <see cref="EnterLoadingState"/> arms a one-shot
     /// <see cref="DispatcherTimer"/> set to this interval; if the row is still in loading
-    /// when the timer fires (no store event arrived), it degrades to an honest "NO DATA"
-    /// affordance. Null = no watchdog (design-time / test determinism). Set by
-    /// MainWindow before entering loading (typically 2x the poll interval).
+    /// when the timer fires (no store event arrived), it degrades to an honest
+    /// "—　暂无数据" affordance. Null = no watchdog (design-time / test determinism).
     /// </summary>
     public TimeSpan? LoadingTimeout { get; set; }
 
@@ -95,15 +92,60 @@ public partial class ProviderRow : UserControl
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // Paint helpers — Phase 14 single-line content swap
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Collapse bar + remaining host + chip + reset and clear opacities so a previous
+    /// figure state cannot leak under a non-figure status line.
+    /// </summary>
+    private void ResetQuotaArea()
+    {
+        QuotaBar.Visibility = Visibility.Collapsed;
+        QuotaBar.Opacity = 1.0;
+        RemainingHost.Visibility = Visibility.Collapsed;
+        ChipBorder.Visibility = Visibility.Collapsed;
+        ChipBorder.Opacity = 1.0;
+        TimestampText.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// ROW-04..09 — show a single status line spanning bar+number. Collapses the
+    /// remaining host, bar, chip, and reset first.
+    /// </summary>
+    private void ShowStatus(string copy, Brush brush, object? tooltip = null)
+    {
+        ResetQuotaArea();
+        StatusText.Text = copy;
+        StatusText.Foreground = brush;
+        StatusText.Visibility = Visibility.Visible;
+        StatusText.ToolTip = tooltip;
+    }
+
+    /// <summary>
+    /// ROW-01..03 / ROW-08 — paint the two-TextBlock remaining host in the 56 DIP
+    /// number column. Collapses StatusText. Caller owns QuotaBar fill/opacity and
+    /// chip/reset visibility.
+    /// </summary>
+    private void ShowRemaining(double? remainingPct, Brush valueBrush)
+    {
+        StatusText.Visibility = Visibility.Collapsed;
+        string? value = QuotaRowFormatter.FormatRemainingValue(remainingPct);
+        if (value is null)
+        {
+            // Non-finite / null → fall back to NoData status (DAT-06).
+            ShowStatus(RowStateCopy.NoData, (Brush)FindResource("Brush.Dimmed"));
+            return;
+        }
+
+        RemainingValue.Text = value;
+        RemainingValue.Foreground = valueBrush;
+        RemainingHost.Visibility = Visibility.Visible;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
     // Render — WIDGET-03 6-state matrix (UI-SPEC §UI Considerations lifted), ported
-    // verbatim per row.
-    //  - Ok: Accent green figure + chip + relative timestamp; no badge.
-    //  - NearLimit: amber figure (advisory — distinct from both Ok green and Error red).
-    //  - Error + prior reading: STALE (last-known @ 50% + STALE badge) — evaluated per
-    //    row against THIS row's own LastSuccessful (DATA-03/stale-per-row).
-    //  - Error + no prior reading: — in red + ERROR badge.
-    //  - NotLoggedIn: — in Dimmed + NO KEY / RE-LOGIN badge.
-    //  - Unsupported: — in Dimmed + UNSUPPORTED badge (closed under the matrix now).
+    // per row. Phase 14: every state is a single-line content swap (ROW-01..09).
     // ─────────────────────────────────────────────────────────────────────────────
 
     /// <summary>Render a terminal (or null) reading for THIS row only.</summary>
@@ -111,16 +153,9 @@ public partial class ProviderRow : UserControl
     {
         if (reading is null)
         {
-            HideQuotaMeter();
-            FigureText.Foreground = (Brush)FindResource("Brush.Dimmed");
-            FigureText.Opacity = 1.0;
-            QuotaBar.Opacity = 1.0;
-            ChipBorder.Visibility = Visibility.Collapsed;
-            ChipBorder.Opacity = 1.0;
+            // ROW-06 — no data yet. Idle hint moves to StatusText tooltip.
+            ShowStatus(RowStateCopy.NoData, (Brush)FindResource("Brush.Dimmed"));
             ClearAllWindowsTooltip();
-            TimestampText.Visibility = Visibility.Collapsed;
-            StateBadge.Visibility = Visibility.Collapsed;
-            StateBadge.ToolTip = null;
             AutomationProperties.SetName(DragRegion, $"{Adapter.DisplayName}, no usage data yet");
             return;
         }
@@ -153,36 +188,17 @@ public partial class ProviderRow : UserControl
                 break;
 
             default:
-                HideQuotaMeter();
-                FigureText.Foreground = (Brush)FindResource("Brush.Dimmed");
-                ChipBorder.Visibility = Visibility.Collapsed;
-                StateBadge.Visibility = Visibility.Collapsed;
+                ShowStatus(RowStateCopy.NoData, (Brush)FindResource("Brush.Dimmed"));
                 break;
-        }
-
-        // Reset opacity for the next render (the STALE path sets it to 0.5).
-        if (reading.Status is not ReadingStatus.Error)
-        {
-            FigureText.Opacity = 1.0;
-            ChipBorder.Opacity = 1.0;
         }
 
         // Accessibility — per-row AutomationProperties.Name is namespaced by provider
         // (02-UI-SPEC §Accessibility): "{Provider}, {percent} remaining, {window} window,
         // updated {relative}". A row with a qualifier badge appends the trailing
-        // "(estimated)" disambiguator (UI-SPEC Phase-4 Accessibility — the retired
-        // "(demo)" pattern reused for the honesty qualifier).
+        // "(estimated)" disambiguator.
         //
-        // The "{window} window" clause is omitted when UsedPct is null or AllWindows
-        // is empty — MostBindingWindow defaults to WindowKind.FiveHour (enum 0), which
-        // would otherwise advertise a phantom "5H window" on Q1 / D-08 empty readings
-        // (OpenCode has no FiveHour window).
-        //
-        // Per-state override (04-02, UI-SPEC Phase-4 Accessibility): the terminal
-        // state renders set _stateAutomationName to their fixed per-state names
-        // ("{Provider}, unsupported" / ", re-login needed" / ", not logged in" /
-        // ", no key"); those names win over the generic sentence here. The flag is
-        // reset per Render call so a later Ok render falls back to the generic name.
+        // Per-state override (04-02): the terminal state renders set _stateAutomationName
+        // to their fixed per-state names; those names win over the generic sentence here.
         if (_stateAutomationName is null)
         {
             double? remainingPct = reading.RemainingPct;
@@ -205,55 +221,43 @@ public partial class ProviderRow : UserControl
         }
     }
 
+    /// <summary>ROW-01 — Ok figure: remaining host + Accent bar + chip + reset.</summary>
     private void RenderOk(UsageReading reading)
     {
         if (reading.UsedPct.HasValue)
         {
-            // UIR-01 — remaining-length bar, never a percent string on FigureText.
-            FigureText.Text = "—";
-            FigureText.Visibility = Visibility.Collapsed;
+            // ROW-01/03 — remaining host + remaining-length bar. 0% is data.
+            ShowRemaining(reading.RemainingPct, (Brush)FindResource("Brush.OnSurface"));
             QuotaBar.Visibility = Visibility.Visible;
             QuotaBar.Opacity = 1.0;
             ApplyRemainingFill(reading.RemainingPct ?? 0);
             QuotaFill.Background = (Brush)FindResource("Brush.Accent");
             ApplyChip(reading);
-            StateBadge.Visibility = Visibility.Collapsed;
-            StateBadge.ToolTip = null;
             ApplyLiveReset(reading);
         }
         else
         {
-            // Empty data:{} → Q1 non-error no-data state.
-            // Pitfall 5 — an empty track must not look exhausted.
-            HideQuotaMeter();
-            FigureText.Foreground = (Brush)FindResource("Brush.Dimmed");
-            ChipBorder.Visibility = Visibility.Collapsed;
-            ClearAllWindowsTooltip();
-            StateBadge.Visibility = Visibility.Collapsed;
+            // Empty data:{} → ROW-06 no-data state. Pitfall 5 — never an empty track.
+            ShowStatus(
+                RowStateCopy.NoData,
+                (Brush)FindResource("Brush.Dimmed"),
+                HasQualifier
+                    ? $"{Adapter.DisplayName} hasn't returned rate-limit headers yet — no estimate available."
+                    : $"{Adapter.DisplayName} has not reported usage yet — check back after your first API call.");
             TimestampText.Text = string.Empty;
             TimestampText.Visibility = Visibility.Collapsed;
-            // Surface the no-data tooltip on the figure itself (no chip to host it).
-            // F1 seam (04-02): an adapter declaring a qualifier (an ESTIMATED figure)
-            // gets the estimate-parameterized copy — the figure is header-derived, and
-            // the absence is "no headers yet", not "no usage yet".
-            FigureText.ToolTip = HasQualifier
-                ? $"{Adapter.DisplayName} hasn't returned rate-limit headers yet — no estimate available."
-                : $"{Adapter.DisplayName} has not reported usage yet — check back after your first API call.";
         }
     }
 
+    /// <summary>ROW-02 — NearLimit: same hosts, NearLimit brushes on value + fill.</summary>
     private void RenderNearLimit(UsageReading reading)
     {
-        // UIR-01 / UIR-02 — same remaining meter as Ok, NearLimit brush, no percent string.
-        FigureText.Text = "—";
-        FigureText.Visibility = Visibility.Collapsed;
+        ShowRemaining(reading.RemainingPct, (Brush)FindResource("Brush.NearLimit"));
         QuotaBar.Visibility = Visibility.Visible;
         QuotaBar.Opacity = 1.0;
         ApplyRemainingFill(reading.RemainingPct ?? 0);
         QuotaFill.Background = (Brush)FindResource("Brush.NearLimit");
         ApplyChip(reading);
-        StateBadge.Visibility = Visibility.Collapsed;
-        StateBadge.ToolTip = null;
         ApplyLiveReset(reading);
     }
 
@@ -261,55 +265,45 @@ public partial class ProviderRow : UserControl
     {
         // DATA-03/stale + STALE-vs-ERROR predicate: if a prior successful reading
         // exists AND the current Error reading is older than one interval (10 min),
-        // show STALE (last-known @ 50% opacity + STALE badge); else hard ERROR.
-        // The predicate is a pure method on UsageStore (UsageStore.IsStale) evaluated
-        // against THIS row's own slot (DATA-03/stale-per-row — one row stale does not
-        // affect another row's state). The truth lives in Core; this is the thin
-        // UI-thread consumer.
+        // show STALE (last-known remaining % + gray bar + 旧 chip); else hard ERROR.
         var lastSuccessful = _store.LastSuccessful(Id);
         var errorAge = DateTimeOffset.UtcNow - reading.FetchedAtUtc;
-
         bool isStale = _store.IsStale(Id, reading);
 
         if (isStale)
         {
             if (lastSuccessful!.HasFigure)
             {
-                FigureText.Text = "—";
-                FigureText.Visibility = Visibility.Collapsed;
+                // ROW-08 — keep last remaining % + gray bar + 旧 chip; no StatusText.
+                ShowRemaining(lastSuccessful.RemainingPct, (Brush)FindResource("Brush.Dimmed"));
                 QuotaBar.Visibility = Visibility.Visible;
                 QuotaBar.Opacity = 0.5;
                 ApplyRemainingFill(lastSuccessful.RemainingPct ?? 0);
                 QuotaFill.Background = (Brush)FindResource("Brush.Dimmed");
                 ApplyLiveReset(lastSuccessful);
+
+                int minutes = (int)Math.Floor(errorAge.TotalMinutes);
+                ChipText.Text = QuotaRowFormatter.ChipWithStaleSuffix(lastSuccessful.MostBindingWindow, stale: true);
+                ChipBorder.Visibility = Visibility.Visible;
+                ChipBorder.Opacity = 0.5;
+                ChipBorder.ToolTip = $"旧 — couldn't reach {Adapter.DisplayName} {minutes}m ago. Showing the last reading. We'll retry automatically.";
+                ClearAllWindowsTooltip();
             }
             else
             {
-                // Pitfall 5 — no-figure lastSuccessful must not paint an empty track.
-                HideQuotaMeter();
-                FigureText.Foreground = (Brush)FindResource("Brush.Dimmed");
-                FigureText.Opacity = 0.5;
+                // ROW-08b — stale, no figure → NoData. Never an empty track (DAT-06).
+                ShowStatus(RowStateCopy.NoData, (Brush)FindResource("Brush.Dimmed"));
                 TimestampText.Text = string.Empty;
                 TimestampText.Visibility = Visibility.Collapsed;
             }
-
-            ChipText.Text = ChipLabel(lastSuccessful!.MostBindingWindow);
-            ChipBorder.Visibility = Visibility.Visible;
-            ChipBorder.Opacity = 0.5;
-            ClearAllWindowsTooltip();
-            StateBadgeText.Text = "STALE";
-            StateBadgeText.Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed");
-            StateBadge.Visibility = Visibility.Visible;
-            int minutes = (int)Math.Floor(errorAge.TotalMinutes);
-            StateBadge.ToolTip = $"Couldn't reach {Adapter.DisplayName} {minutes}m ago. Showing the last reading. We'll retry automatically.";
         }
         else
         {
-            HideQuotaMeter();
-            FigureText.Foreground = (Brush)FindResource("Brush.Error");
-            FigureText.Opacity = 1.0;
-            ChipBorder.Visibility = Visibility.Collapsed;
-            ChipBorder.Opacity = 1.0;
+            // ROW-07 — fresh error: RequestFailed + Error brush.
+            string? errorMsg = string.IsNullOrEmpty(reading.ErrorMessage)
+                ? $"Couldn't reach {Adapter.DisplayName}. Check your connection; we'll retry in 10 min."
+                : reading.ErrorMessage;
+            ShowStatus(RowStateCopy.RequestFailed, (Brush)FindResource("Brush.Error"), errorMsg);
             if (reading.AllWindows is { Count: > 0 })
             {
                 ApplyAllWindowsTooltip(reading);
@@ -318,59 +312,32 @@ public partial class ProviderRow : UserControl
             {
                 ClearAllWindowsTooltip();
             }
-            StateBadgeText.Text = "ERROR";
-            StateBadgeText.Foreground = (Brush)FindResource("Brush.Error");
-            StateBadge.Visibility = Visibility.Visible;
-            StateBadge.ToolTip = string.IsNullOrEmpty(reading.ErrorMessage)
-                ? $"Couldn't reach {Adapter.DisplayName}. Check your connection; we'll retry in 10 min."
-                : reading.ErrorMessage;
         }
     }
 
     private void RenderNotLoggedIn(UsageReading reading)
     {
-        HideQuotaMeter();
-        FigureText.Foreground = (Brush)FindResource("Brush.Dimmed");
-        ChipBorder.Visibility = Visibility.Collapsed;
-        ClearAllWindowsTooltip();
-
         if (Adapter.AuthFamily == AuthFamily.Session)
         {
-            // F4 — the SESSION-family NO LOGIN / RE-LOGIN split, on the NAMED render
-            // discriminant (04-02 Task 3): the poller parks a session ONLY on
-            // (NotLoggedIn AND Session-family AND credential-present) — i.e. a
-            // credential existed but the provider rejected it. ProviderRow cannot see
-            // ProviderPoller.SessionParked directly, so the classification is carried
-            // by Detect() re-evaluated AT RENDER TIME on the parked reading's terminal
-            // shape: a parked session's credential file still exists (Detect() true =>
-            // RE-LOGIN); a never-detected session has no credential at all (Detect()
-            // false => NO LOGIN — the poller never parks). The two never collide: a
-            // never-detected row cannot satisfy Detect() == true.
+            // F4 — the SESSION-family NO LOGIN / RE-LOGIN split.
             if (Adapter.Detect())
             {
-                // RE-LOGIN — plain-text re-auth guidance, NO hyperlink (re-auth happens
-                // in the official app, not a webpage; UI-SPEC F4/D-05).
-                StateBadgeText.Text = "RE-LOGIN";
-                StateBadgeText.Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed");
-                StateBadge.Visibility = Visibility.Visible;
-                StateBadge.ToolTip =
+                // RE-LOGIN — plain-text re-auth guidance, NO hyperlink.
+                string tooltip =
                     Adapter.ReLoginGuidance is string guidance
                         ? $"The {Adapter.DisplayName} session expired. {guidance} — PlanMeter never refreshes tokens itself."
                         : $"The {Adapter.DisplayName} session expired. Re-authorize in the official {Adapter.DisplayName} app — PlanMeter never refreshes tokens itself.";
-                // D-05 — a stopped row never renders a timestamp (a frozen relative
-                // time would lie; no further polls occur).
+                ShowStatus(RowStateCopy.NeedLogin, (Brush)FindResource("Brush.Dimmed"), tooltip);
                 TimestampText.Visibility = Visibility.Collapsed;
                 _stateAutomationName = $"{Adapter.DisplayName}, re-login needed";
             }
             else
             {
-                StateBadgeText.Text = "NO LOGIN";
-                StateBadgeText.Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed");
-                StateBadge.Visibility = Visibility.Visible;
-                StateBadge.ToolTip =
+                string tooltip =
                     Adapter.ReLoginGuidance is string guidance
                         ? $"{Adapter.DisplayName} isn't logged in on this machine. {guidance} — PlanMeter reads only local state."
                         : $"{Adapter.DisplayName} isn't logged in on this machine. Authorize in the official {Adapter.DisplayName} app — PlanMeter reads only local state.";
+                ShowStatus(RowStateCopy.NeedLogin, (Brush)FindResource("Brush.Dimmed"), tooltip);
                 TimestampText.Visibility = Visibility.Collapsed;
                 _stateAutomationName = $"{Adapter.DisplayName}, not logged in";
             }
@@ -378,109 +345,78 @@ public partial class ProviderRow : UserControl
             return;
         }
 
-        // KEY family — NO KEY / RE-LOGIN split on THIS adapter's DPAPI blob
-        // (Adapter.Detect(), never the injected Z.ai store). Poll-backed: polls
-        // continue, so the timestamp keeps rendering.
+        // KEY family — NO KEY / RE-LOGIN split on THIS adapter's DPAPI blob.
         bool blobExists = Adapter.Detect();
         if (blobExists)
         {
-            // 401 with a stored key → RE-LOGIN. The console hyperlink renders only when
-            // the adapter declares a URL (D-09); a null-URL provider gets plain text.
-            StateBadgeText.Text = "RE-LOGIN";
-            StateBadgeText.Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed");
-            StateBadge.Visibility = Visibility.Visible;
-            StateBadge.ToolTip = BuildReLoginTooltip();
+            // 401 with a stored key → RE-LOGIN. Hyperlink tooltip when ConsoleUrl declared.
+            ShowStatus(RowStateCopy.NeedLogin, (Brush)FindResource("Brush.Dimmed"), BuildReLoginTooltip());
             _stateAutomationName = $"{Adapter.DisplayName}, re-login needed";
         }
         else
         {
-            StateBadgeText.Text = "NO KEY";
-            StateBadgeText.Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed");
-            StateBadge.Visibility = Visibility.Visible;
-            // 03-UI-SPEC amended copy — key entry lives only in the settings window, so the
-            // tooltip says where: "in Settings to see usage".
-            StateBadge.ToolTip = $"Enter a {Adapter.DisplayName} API key in Settings to see usage. PlanMeter reads it only locally.";
+            // ROW-04a — not configured.
+            ShowStatus(
+                RowStateCopy.NotConfigured,
+                (Brush)FindResource("Brush.Dimmed"),
+                $"Enter a {Adapter.DisplayName} API key in Settings to see usage. PlanMeter reads it only locally.");
             _stateAutomationName = $"{Adapter.DisplayName}, no key";
         }
     }
 
     private void RenderUnsupported(UsageReading reading)
     {
-        HideQuotaMeter();
-        FigureText.Foreground = (Brush)FindResource("Brush.Dimmed");
-        ChipBorder.Visibility = Visibility.Collapsed;
-        ClearAllWindowsTooltip();
-        StateBadgeText.Text = "UNSUPPORTED";
-        StateBadgeText.Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed");
-        StateBadge.Visibility = Visibility.Visible;
-        // D-10/E3 — the verdict tooltip is per-provider adapter data when declared; the
-        // former hard-coded string is the generic default, not the only value.
-        StateBadge.ToolTip = Adapter.UnsupportedReason
+        // ROW-09a
+        string? tooltip = Adapter.UnsupportedReason
             ?? "PlanMeter doesn't poll this provider — doing so risks your account. Open the provider's own app to see usage.";
-        // UI-SPEC timestamp rule — a poller-less row never renders a timestamp.
+        ShowStatus(RowStateCopy.Unsupported, (Brush)FindResource("Brush.Dimmed"), tooltip);
         TimestampText.Visibility = Visibility.Collapsed;
         _stateAutomationName = $"{Adapter.DisplayName}, unsupported";
     }
 
     /// <summary>
     /// F3/SC#2 — the DETECTION-AWARE floor render (04-02; the D-06 OpenCode shape):
-    /// detected (the auth file is present at render time) renders the USAGE N/A badge
-    /// with the <see cref="IProviderAdapter.FloorReason"/> tooltip — logged in, but no
-    /// safe usage endpoint; not detected renders the NO LOGIN badge with the
-    /// session-family NO-LOGIN tooltip. Both collapse the timestamp (no fetch ever
-    /// happened). Called by MainWindow's SHARED static-row path keyed on
-    /// FloorReason — no per-provider branch ever reaches here.
+    /// detected → ROW-09b UsageNotAvailable; not detected → ROW-04b NeedLogin.
     /// </summary>
     public void RenderFloor(bool detected)
     {
-        HideQuotaMeter();
-        FigureText.Foreground = (Brush)FindResource("Brush.Dimmed");
-        FigureText.Opacity = 1.0;
-        ChipBorder.Visibility = Visibility.Collapsed;
-        ChipBorder.Opacity = 1.0;
-        ClearAllWindowsTooltip();
-        TimestampText.Visibility = Visibility.Collapsed;
-
         if (detected)
         {
-            StateBadgeText.Text = "USAGE N/A";
-            StateBadgeText.Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed");
-            StateBadge.Visibility = Visibility.Visible;
-            StateBadge.ToolTip = Adapter.FloorReason
+            // ROW-09b — UsageNotAvailable
+            string tooltip = Adapter.FloorReason
                 ?? (Adapter.ReLoginGuidance is string guidance
                     ? $"{Adapter.DisplayName} is logged in, but exposes no usage endpoint PlanMeter can safely read. Check {guidance} for usage."
                     : $"{Adapter.DisplayName} is logged in, but exposes no usage endpoint PlanMeter can safely read.");
+            ShowStatus(RowStateCopy.UsageNotAvailable, (Brush)FindResource("Brush.Dimmed"), tooltip);
             _stateAutomationName = $"{Adapter.DisplayName}, logged in, usage not available";
         }
         else
         {
-            StateBadgeText.Text = "NO LOGIN";
-            StateBadgeText.Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed");
-            StateBadge.Visibility = Visibility.Visible;
-            StateBadge.ToolTip =
+            // ROW-04b — NeedLogin
+            string tooltip =
                 Adapter.ReLoginGuidance is string guidance
                     ? $"{Adapter.DisplayName} isn't detected on this machine. {guidance} — PlanMeter reads only local state."
                     : $"{Adapter.DisplayName} isn't logged in on this machine. Log in with the official {Adapter.DisplayName} app — PlanMeter reads only local state.";
+            ShowStatus(RowStateCopy.NeedLogin, (Brush)FindResource("Brush.Dimmed"), tooltip);
             _stateAutomationName = $"{Adapter.DisplayName}, not logged in";
         }
+
+        TimestampText.Visibility = Visibility.Collapsed;
     }
 
     /// <summary>
     /// D-01 (09-02) — idle hint for a ManualOnlyFetch row that Detects true and has
-    /// no stored reading. Tooltip + automation only; never a StateBadge (the copy
-    /// will not fit the 180 DIP row). Callers must Render(null) first so the dash /
-    /// no-badge / no-timestamp chrome is already painted.
+    /// no stored reading. Tooltip + automation only. Callers must Render(null) first
+    /// so the NoData status is already painted.
     /// </summary>
     public void SetIdleHint(string hint)
     {
-        FigureText.ToolTip = hint;
+        StatusText.ToolTip = hint;
         AutomationProperties.SetName(DragRegion, $"{Adapter.DisplayName}, refresh to check");
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Loading state (WIDGET-03/loading). ProgressBar replaces the figure while a
-    // fetch is in-flight and no terminal reading exists. Clears on the first
-    // terminal reading (MainWindow's per-slot dispatch calls ExitLoadingState first).
+    // Loading state (WIDGET-03/loading). Phase 14: text, not a ProgressBar.
     // ─────────────────────────────────────────────────────────────────────────────
 
     public void EnterLoadingState()
@@ -497,45 +433,33 @@ public partial class ProviderRow : UserControl
 
     /// <summary>
     /// D-07 (09-02) — in-flight loading for a ManualOnlyFetch row on global Refresh.
-    /// Copies <see cref="EnterLoadingState"/> visuals but does NOT return when a
-    /// prior reading exists (that guard is why a second Refresh after success
-    /// would keep the last figure frozen). Timeout is 30s = 2× the named-client
-    /// 15s HttpClient timeout, not 2× the poll interval.
+    /// Phase 14: if Current(Id) has a figure, skip the loading swap (do not blank a
+    /// good row); still arm the watchdog. Timeout is 30s.
     /// </summary>
     public void EnterInFlightLoading()
     {
         LoadingTimeout = TimeSpan.FromSeconds(30);
+
+        // Decision 3 — skip loading swap when a prior figure exists.
+        if (_store.Current(Id) is { HasFigure: true })
+        {
+            ArmLoadingWatchdog();
+            return;
+        }
+
         ShowLoadingVisuals();
         ArmLoadingWatchdog();
     }
 
     private void ShowLoadingVisuals()
     {
-        if (SystemParameters.ClientAreaAnimation)
-        {
-            LoadingProgress.Visibility = Visibility.Visible;
-            LoadingGlyph.Visibility = Visibility.Collapsed;
-        }
-        else
-        {
-            // E10 reduced-motion: static … glyph instead of the animated ProgressBar.
-            LoadingProgress.Visibility = Visibility.Collapsed;
-            LoadingGlyph.Visibility = Visibility.Visible;
-        }
-
-        FigureText.Visibility = Visibility.Collapsed;
-        QuotaBar.Visibility = Visibility.Collapsed;
-        ChipBorder.Visibility = Visibility.Collapsed;
-        TimestampText.Visibility = Visibility.Collapsed;
-        StateBadge.Visibility = Visibility.Collapsed;
+        ShowStatus(RowStateCopy.Loading, (Brush)FindResource("Brush.Dimmed"));
     }
 
     private void ArmLoadingWatchdog()
     {
         // G-04-4 loading watchdog — arm a one-shot timer that degrades to an honest
-        // NO DATA affordance if no store event arrives within the timeout. The timer
-        // is UI-thread-only (DispatcherTimer), one-shot (no re-arm loop), and disarmed
-        // by ExitLoadingState (T-04-26).
+        // NoData affordance if no store event arrives within the timeout.
         if (LoadingTimeout is TimeSpan timeout)
         {
             _loadingWatchdog?.Stop();
@@ -550,18 +474,12 @@ public partial class ProviderRow : UserControl
         // G-04-4 — disarm the watchdog when the store event arrives (normal exit).
         _loadingWatchdog?.Stop();
         _loadingWatchdog = null;
-
-        LoadingProgress.Visibility = Visibility.Collapsed;
-        LoadingGlyph.Visibility = Visibility.Collapsed;
-        QuotaBar.Visibility = Visibility.Collapsed;
-        // Do not force FigureText Visible — the following Render owns figure-vs-bar.
     }
 
     /// <summary>
     /// G-04-4 loading watchdog tick — the poller has been silent for ~2 intervals with
-    /// no store event. Degrade to an honest "NO DATA" affordance: figure "—", dimmed,
-    /// badge "NO DATA", tooltip "{Provider} hasn't reported yet — still trying."
-    /// This is an error-SHAPED state, never a fabricated number (T-04-25).
+    /// no store event. Degrade to ROW-06 NoData. This is an error-SHAPED state, never
+    /// a fabricated number (T-04-25).
     /// </summary>
     private void LoadingWatchdog_Tick(object? sender, EventArgs e)
     {
@@ -572,8 +490,7 @@ public partial class ProviderRow : UserControl
 
         // If a store event arrived between arming and ticking, ExitLoadingState already
         // handled it. After a prior success EnterInFlightLoading also leaves Current
-        // populated — restore that last figure instead of leaving the spinner (D-02)
-        // or fabricating a percent (T-09-09).
+        // populated — restore that last figure instead of leaving the loading text.
         if (_store.Current(Id) is UsageReading current)
         {
             ExitLoadingState();
@@ -581,39 +498,22 @@ public partial class ProviderRow : UserControl
             return;
         }
 
-        // Exit the visual loading state (collapse the indeterminate bar).
-        LoadingProgress.Visibility = Visibility.Collapsed;
-        LoadingGlyph.Visibility = Visibility.Collapsed;
-        HideQuotaMeter();
-
-        // Render the honest NO DATA degraded affordance.
-        FigureText.Foreground = (Brush)FindResource("Brush.Dimmed");
-        FigureText.Opacity = 1.0;
-        ChipBorder.Visibility = Visibility.Collapsed;
-        ChipBorder.Opacity = 1.0;
-        ClearAllWindowsTooltip();
-        TimestampText.Visibility = Visibility.Collapsed;
-        StateBadgeText.Text = "NO DATA";
-        StateBadgeText.Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed");
-        StateBadge.Visibility = Visibility.Visible;
-        StateBadge.ToolTip =
-            $"{Adapter.DisplayName} hasn't reported yet — still trying.";
+        // Render the honest ROW-06 NoData degraded affordance.
+        ShowStatus(
+            RowStateCopy.NoData,
+            (Brush)FindResource("Brush.Dimmed"),
+            $"{Adapter.DisplayName} hasn't reported yet — still trying.");
         AutomationProperties.SetName(DragRegion,
             $"{Adapter.DisplayName}, no data yet");
     }
 
     /// <summary>
-    /// Apply the most-binding window chip + the DATA-02 all-windows tooltip (a
-    /// StackPanel listing every parsed window line-per-window). Chip vocabulary
-    /// is the fixed token set {5H, WEEK, MONTH, ROLL} — uppercase Label per UI-SPEC.
-    /// Each line appends "· resets in {relative}" when the window carries a
-    /// ResetsAtUtc (D-03/D-04), omitted silently when null (D-05).
-    /// G-08-2 — tooltip assignment is delegated so the used-% figure and the chip
-    /// each get an independently-built tree (a FrameworkElement cannot parent twice).
+    /// Apply the most-binding window chip + the DATA-02 all-windows tooltip.
+    /// Phase 14: optional stale flag appends " · 旧" (ROW-08).
     /// </summary>
-    private void ApplyChip(UsageReading reading)
+    private void ApplyChip(UsageReading reading, bool stale = false)
     {
-        ChipText.Text = ChipLabel(reading.MostBindingWindow);
+        ChipText.Text = QuotaRowFormatter.ChipWithStaleSuffix(reading.MostBindingWindow, stale);
         ChipBorder.Visibility = Visibility.Visible;
 
         if (reading.AllWindows is { Count: > 0 })
@@ -627,9 +527,8 @@ public partial class ProviderRow : UserControl
     }
 
     /// <summary>
-    /// G-08-2 — build one all-windows tooltip tree. Callers that assign the same
-    /// content to two ToolTip properties must call this twice; a single
-    /// FrameworkElement cannot be parented to two ToolTip hosts.
+    /// G-08-2 — build one all-windows tooltip tree. DAT-07 appends FormatLastUpdateLine
+    /// after the window stack, before the QualifierText estimate note.
     /// </summary>
     private StackPanel? BuildAllWindowsTooltip(UsageReading reading)
     {
@@ -641,8 +540,7 @@ public partial class ProviderRow : UserControl
         var stack = new StackPanel();
         foreach (var w in WindowReadings.DistinctMostBindingByKind(all))
         {
-            // UIR-04 — used% + full local timestamp via FormatTooltipLine; remaining implied.
-            // QualifierText-gated estimate line below is left in place (no-op after UIR-03).
+            // DAT-07 — remaining+used + full local timestamp via FormatTooltipLine.
             string line = QuotaRowFormatter.FormatTooltipLine(w, DateTimeOffset.UtcNow);
 
             stack.Children.Add(new TextBlock
@@ -653,7 +551,15 @@ public partial class ProviderRow : UserControl
             });
         }
 
-        // D-13 — estimate note is manifest-driven via QualifierText, not a Grok special-case.
+        // DAT-07 — provider last-update line.
+        stack.Children.Add(new TextBlock
+        {
+            Text = QuotaRowFormatter.FormatLastUpdateLine(reading.FetchedAtUtc),
+            Style = (Style)FindResource("TextLabelStyle"),
+            Foreground = (Brush)FindResource("Brush.OnSurface.Dimmed"),
+        });
+
+        // D-13 — estimate note is manifest-driven via QualifierText.
         if (!string.IsNullOrEmpty(Adapter.QualifierText))
         {
             stack.Children.Add(new TextBlock
@@ -669,26 +575,26 @@ public partial class ProviderRow : UserControl
 
     /// <summary>
     /// G-08-2 — assign independently-built all-windows trees to the chip, remaining
-    /// bar, AND compact-reset label so hovering any of the three surfaces shows the
-    /// same ROLL/WEEK/MONTH lines (UIR-04). Never share one StackPanel.
+    /// bar, compact-reset label, AND remaining host. Never share one StackPanel.
     /// </summary>
     private void ApplyAllWindowsTooltip(UsageReading reading)
     {
         ChipBorder.ToolTip = BuildAllWindowsTooltip(reading);
         QuotaBar.ToolTip = BuildAllWindowsTooltip(reading);
         TimestampText.ToolTip = BuildAllWindowsTooltip(reading);
+        RemainingHost.ToolTip = BuildAllWindowsTooltip(reading);
     }
 
     /// <summary>
-    /// G-08-2 — drop hover targets so a previous Ok tooltip cannot linger on
-    /// an em dash, NO DATA figure, unrefreshed STALE chip, or leftover reset label.
+    /// G-08-2 — drop hover targets so a previous Ok tooltip cannot linger.
     /// </summary>
     private void ClearAllWindowsTooltip()
     {
         ChipBorder.ToolTip = null;
         QuotaBar.ToolTip = null;
         TimestampText.ToolTip = null;
-        FigureText.ToolTip = null;
+        RemainingHost.ToolTip = null;
+        StatusText.ToolTip = null;
     }
 
     /// <summary>
@@ -700,17 +606,6 @@ public partial class ProviderRow : UserControl
         var (fillStars, emptyStars) = QuotaRowFormatter.RemainingFill(remainingPct);
         QuotaFillCol.Width = new GridLength(fillStars, GridUnitType.Star);
         QuotaEmptyCol.Width = new GridLength(emptyStars, GridUnitType.Star);
-    }
-
-    /// <summary>
-    /// Collapse the remaining meter and restore the em-dash figure so a previous Ok
-    /// fill cannot leak under a non-figure state (Pitfall 4 / Pitfall 5).
-    /// </summary>
-    private void HideQuotaMeter()
-    {
-        QuotaBar.Visibility = Visibility.Collapsed;
-        FigureText.Visibility = Visibility.Visible;
-        FigureText.Text = "—";
     }
 
     /// <summary>
@@ -766,9 +661,8 @@ public partial class ProviderRow : UserControl
     }
 
     /// <summary>
-    /// D-09 — the shared console deep-link hyperlink (extracted from the former
-    /// Z.ai-hardcoded RE-LOGIN tooltip): plain foreground at rest, underline ONLY on
-    /// hover (<see cref="TextDecorations"/> null ↔ Underline), click opens the URL via
+    /// D-09 — the shared console deep-link hyperlink: plain foreground at rest,
+    /// underline ONLY on hover, click opens the URL via
     /// <c>Process.Start(UseShellExecute=true)</c>. A click that cannot open a browser
     /// is a silent no-op (the Win32Exception / FileNotFoundException catch pair —
     /// F5-error, T-04-07).
@@ -811,10 +705,9 @@ public partial class ProviderRow : UserControl
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Drag region (WIDGET-02/drag; UI-SPEC §Drag region). DragMove fires ONLY from
-    // DragRegion (provider name + figure area) — the chip, timestamp, and qualifier badge
-    // live OUTSIDE DragRegion or outside its hit-target contract, so clicks there
-    // never bubble here. The _userMovedWindow flag (D-26) is communicated to MainWindow
-    // via <see cref="UserDragStarted"/>.
+    // DragRegion (provider name + bar + number) — the chip, timestamp, and qualifier
+    // badge live OUTSIDE DragRegion or outside its hit-target contract, so clicks
+    // there never bubble here.
     // ─────────────────────────────────────────────────────────────────────────────
 
     private void DragRegion_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

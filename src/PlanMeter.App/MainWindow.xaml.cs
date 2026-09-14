@@ -294,10 +294,19 @@ public partial class MainWindow : Window
 
         if (row.Adapter.RequiresManualKey && !_keyStoreFactory(row.Id).BlobPathExists())
         {
-            // A manual-key provider with no stored key yet — render the NO KEY state
-            // (not loading). Manifest-driven: any future manual-key provider gets the
-            // same NO-KEY-at-startup render.
-            row.Render(null);
+            // A manual-key provider with no stored key yet — synthesize NotLoggedIn
+            // (ROW-04a 未配置), not bare null. Bare Render(null) is reserved for
+            // no-data / manual idle. Manifest-driven: any future manual-key provider
+            // gets the same NotLoggedIn-at-startup render.
+            row.Render(new UsageReading(
+                Provider: row.Adapter.DisplayName,
+                FetchedAtUtc: DateTimeOffset.UtcNow,
+                Status: ReadingStatus.NotLoggedIn,
+                UsedPct: null,
+                RemainingPct: null,
+                MostBindingWindow: default,
+                AllWindows: null,
+                ErrorMessage: null));
             return;
         }
 

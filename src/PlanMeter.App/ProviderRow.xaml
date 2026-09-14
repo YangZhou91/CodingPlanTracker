@@ -8,178 +8,140 @@
 
     <!-- D-23 / LAY-03 — the PlanMeter B single-row chrome. Fixed 26 DIP height
          includes the 1 DIP bottom stroke (last row thickness 0). Widths cite
-         WidgetLayout.* (Core.Presentation); a later x:Static pass can bind them. -->
+         WidgetLayout.* (Core.Presentation); a later x:Static pass can bind them.
+         Phase 14: BottomDivider hosts RowOuter directly — no vertical StackPanel,
+         no under-row StateBadge. Every state is a single-line content swap. -->
     <Border x:Name="BottomDivider"
             Height="26"
             BorderBrush="{DynamicResource Brush.Divider}"
             BorderThickness="0,0,0,0">
-        <StackPanel Orientation="Vertical">
 
-            <!-- ROW (outer Grid). Columns: DragRegion 219 | gap 6 | Chip 45 | gap 6 | Reset 26
-                 = 302 content (WidgetLayout.DragRegionWidth / ChipW / ResetW / ColGap).
-                 Applied widths are font-measured: chip +8 from bar (WEEK/MONTH), reset +4
-                 from number ("now"). bar+chip stays 109; window stays 320.
-                 DragRegion = provider name + bar + number only (REG-02); chip and
-                 timestamp live OUTSIDE DragRegion so clicks there never initiate a drag.
-                 SharedSizeGroup is gone (T-13-02) — fixed widths + TextTrimming. -->
-            <Grid x:Name="RowOuter">
+        <!-- ROW (outer Grid). Columns: DragRegion 219 | gap 6 | Chip 45 | gap 6 | Reset 26
+             = 302 content (WidgetLayout.DragRegionWidth / ChipW / ResetW / ColGap).
+             Applied widths are font-measured: chip +8 from bar (WEEK/MONTH), reset +4
+             from number ("now"). bar+chip stays 109; window stays 320.
+             DragRegion = provider name + bar + number only (REG-02); chip and
+             timestamp live OUTSIDE DragRegion so clicks there never initiate a drag.
+             SharedSizeGroup is gone (T-13-02) — fixed widths + TextTrimming. -->
+        <Grid x:Name="RowOuter">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="219" />
+                <ColumnDefinition Width="45" />
+                <ColumnDefinition Width="26" />
+            </Grid.ColumnDefinitions>
+
+            <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
+                 here (WIDGET-02/drag; UI-SPEC §Drag region). Nested fixed columns:
+                 Name 87 | gap 6 | Bar 64 | gap 6 | Number 56 = 219
+                 (WidgetLayout.NameW/BarW/NumberW/ColGap/DragRegionWidth). -->
+            <Grid x:Name="DragRegion"
+                  Grid.Column="0"
+                  Background="Transparent"
+                  Cursor="SizeAll"
+                  MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="219" />
-                    <ColumnDefinition Width="45" />
-                    <ColumnDefinition Width="26" />
+                    <ColumnDefinition Width="87" />
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="56" />
                 </Grid.ColumnDefinitions>
 
-                <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
-                     here (WIDGET-02/drag; UI-SPEC §Drag region). Nested fixed columns:
-                     Name 87 | gap 6 | Bar 64 | gap 6 | Number 56 = 219
-                     (WidgetLayout.NameW/BarW/NumberW/ColGap/DragRegionWidth). -->
-                <Grid x:Name="DragRegion"
-                      Grid.Column="0"
-                      Background="Transparent"
-                      Cursor="SizeAll"
-                      MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="87" />
-                        <ColumnDefinition Width="64" />
-                        <ColumnDefinition Width="56" />
-                    </Grid.ColumnDefinitions>
+                <!-- Provider name + the persistent qualifier badge (F1/UI-SPEC).
+                     Badge Visibility + Text come from the adapter manifest
+                     QualifierText (code-behind), NOT from a render state. -->
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock x:Name="ProviderText"
+                               Text="Z.ai"
+                               FontSize="{StaticResource Text.Name.Size}"
+                               FontWeight="Regular"
+                               FontFamily="{StaticResource FontFamily.App}"
+                               Foreground="{DynamicResource Brush.OnSurface}"
+                               VerticalAlignment="Center"
+                               TextWrapping="NoWrap"
+                               AutomationProperties.Name="Z.ai" />
+                    <Border x:Name="QualifierBadge"
+                            Style="{StaticResource StateBadgeStyle}"
+                            Background="{DynamicResource Brush.Surface.Elevated}"
+                            BorderBrush="{DynamicResource Brush.Divider}"
+                            VerticalAlignment="Center"
+                            Margin="4,0,0,0"
+                            Visibility="Collapsed"
+                            AutomationProperties.Name="Estimated figure">
+                        <TextBlock x:Name="QualifierBadgeText"
+                                   Text="ESTIMATED"
+                                   Style="{StaticResource TextMutedStyle}"
+                                   Foreground="{DynamicResource Brush.OnSurface.Dimmed}" />
+                    </Border>
+                </StackPanel>
 
-                    <!-- Provider name + the persistent qualifier badge (F1/UI-SPEC).
-                         Badge Visibility + Text come from the adapter manifest
-                         QualifierText (code-behind), NOT from a render state. -->
-                    <StackPanel Grid.Column="0"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Center">
-                        <TextBlock x:Name="ProviderText"
-                                   Text="Z.ai"
-                                   FontSize="{StaticResource Text.Name.Size}"
-                                   FontWeight="Regular"
-                                   FontFamily="{StaticResource FontFamily.App}"
-                                   Foreground="{DynamicResource Brush.OnSurface}"
-                                   VerticalAlignment="Center"
-                                   TextWrapping="NoWrap"
-                                   AutomationProperties.Name="Z.ai" />
-                        <Border x:Name="QualifierBadge"
-                                Style="{StaticResource StateBadgeStyle}"
-                                Background="{DynamicResource Brush.Surface.Elevated}"
-                                BorderBrush="{DynamicResource Brush.Divider}"
-                                VerticalAlignment="Center"
-                                Margin="4,0,0,0"
-                                Visibility="Collapsed"
-                                AutomationProperties.Name="Estimated figure">
-                            <TextBlock x:Name="QualifierBadgeText"
-                                       Text="ESTIMATED"
-                                       Style="{StaticResource TextMutedStyle}"
-                                       Foreground="{DynamicResource Brush.OnSurface.Dimmed}" />
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Figure + loading affordance share the applied 64 DIP bar column
-                         (WidgetLayout.BarW). Gaps come from cell margins. -->
-                    <Grid Grid.Column="1"
-                          Margin="6,0,0,0"
+                <!-- Bar cell (applied 64 DIP, WidgetLayout.BarW). Hosts ONLY QuotaBar
+                     for Ok/NearLimit/Stale figure states. No FigureText, no
+                     LoadingProgress, no LoadingGlyph — Phase 14 deletes them. -->
+                <Grid Grid.Column="1"
+                      Margin="6,0,0,0"
+                      VerticalAlignment="Center"
+                      HorizontalAlignment="Stretch">
+                    <!-- UIR-01 remaining-quota meter. Height 4 / CornerRadius 3
+                         (WidgetLayout.BarHeight / BarRadius). Track is Brush.QuotaTrack;
+                         fill is Accent/NearLimit/Dimmed from code. -->
+                    <Grid x:Name="QuotaBar"
+                          Height="4"
+                          Visibility="Collapsed"
+                          Cursor="Arrow"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Stretch">
-                        <!-- Display figure (terminal states). Live Ok/NearLimit hide this
-                             and show QuotaBar instead (UIR-01 — no on-row percent).
-                             Phase 14 wires "剩余 xx%" here; the 60 DIP number column
-                             is intentionally empty until then. -->
-                        <TextBlock x:Name="FigureText"
-                                   Text="—"
-                                   FontSize="{StaticResource Text.Percent.Size}"
-                                   FontWeight="Medium"
-                                   FontFamily="{StaticResource FontFamily.App}"
-                                   Foreground="{DynamicResource Brush.Accent}"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Right"
-                                   Cursor="Arrow"
-                                   AutomationProperties.LiveSetting="Polite" />
-
-                        <!-- UIR-01 remaining-quota meter. Height 4 / CornerRadius 3
-                             (WidgetLayout.BarHeight / BarRadius). Track is Brush.QuotaTrack
-                             (new B token); fill is Accent/NearLimit/Dimmed from code. -->
-                        <Grid x:Name="QuotaBar"
-                              Height="4"
-                              Visibility="Collapsed"
-                              Cursor="Arrow"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Stretch">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition x:Name="QuotaFillCol" Width="0*" />
-                                <ColumnDefinition x:Name="QuotaEmptyCol" Width="100*" />
-                            </Grid.ColumnDefinitions>
-                            <Border x:Name="QuotaTrack"
-                                    Grid.ColumnSpan="2"
-                                    Height="4"
-                                    Background="{DynamicResource Brush.QuotaTrack}"
-                                    CornerRadius="3" />
-                            <Border x:Name="QuotaFill"
-                                    Grid.Column="0"
-                                    Height="4"
-                                    Background="{DynamicResource Brush.Accent}"
-                                    CornerRadius="3" />
-                        </Grid>
-
-                        <!-- WIDGET-03/loading — indeterminate ProgressBar replacing the
-                             figure while a fetch is in-flight and no terminal reading
-                             exists yet. Reduced-motion collapses this to the static glyph. -->
-                        <ProgressBar x:Name="LoadingProgress"
-                                     IsIndeterminate="True"
-                                     Height="4"
-                                     HorizontalAlignment="Stretch"
-                                     VerticalAlignment="Center"
-                                     Visibility="Collapsed" />
-
-                        <!-- Reduced-motion fallback (SystemParameters.ClientAreaAnimation == false):
-                             a static "…" glyph in place of the animated ProgressBar. -->
-                        <TextBlock x:Name="LoadingGlyph"
-                                   Text="…"
-                                   FontSize="{StaticResource Text.Percent.Size}"
-                                   FontWeight="Medium"
-                                   FontFamily="{StaticResource FontFamily.App}"
-                                   Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Right"
-                                   Visibility="Collapsed" />
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="QuotaFillCol" Width="0*" />
+                            <ColumnDefinition x:Name="QuotaEmptyCol" Width="100*" />
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="QuotaTrack"
+                                Grid.ColumnSpan="2"
+                                Height="4"
+                                Background="{DynamicResource Brush.QuotaTrack}"
+                                CornerRadius="3" />
+                        <Border x:Name="QuotaFill"
+                                Grid.Column="0"
+                                Height="4"
+                                Background="{DynamicResource Brush.Accent}"
+                                CornerRadius="3" />
                     </Grid>
-
-                    <!-- Number column (applied 56 DIP, WidgetLayout.NumberW). Phase 14 paints
-                         "剩余 xx%" here; Ok path leaves it empty until then (decision 1).
-                         Host kept so the column has a stable child for measure. -->
-                    <Border Grid.Column="2"
-                            Margin="6,0,0,0"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Stretch"
-                            Background="Transparent" />
                 </Grid>
 
-                <!-- Window-type chip (outside DragRegion — clicking the chip never drags).
-                     Fill-only (no border), radius 3, padding 3,1 so WEEK/MONTH fit the
-                     applied 45 DIP column (WidgetLayout.ChipW, font-measure steal 8).
-                     DATA-02/all-windows-tooltip — ToolTip is set imperatively from Render. -->
-                <Border x:Name="ChipBorder"
-                        Grid.Column="1"
-                        Margin="6,0,0,0"
-                        Background="{DynamicResource Brush.Surface.Elevated}"
-                        CornerRadius="3"
-                        Padding="3,1"
-                        Visibility="Collapsed"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Center"
-                        Cursor="Arrow">
-                    <TextBlock x:Name="ChipText"
-                               Text="5H"
+                <!-- Number column (applied 56 DIP, WidgetLayout.NumberW). DAT-01 remaining
+                     label: two TextBlocks (prefix 11 muted + value 13 Medium tabular).
+                     Measured ≈54 DIP at 100%. NoWrap; optional CharacterEllipsis on value. -->
+                <StackPanel x:Name="RemainingHost"
+                            Grid.Column="2"
+                            Margin="6,0,0,0"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Visibility="Collapsed">
+                    <TextBlock x:Name="RemainingPrefix"
+                               Text="剩余"
                                Style="{StaticResource TextMutedStyle}"
                                Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
-                               HorizontalAlignment="Center"
+                               VerticalAlignment="Baseline" />
+                    <TextBlock x:Name="RemainingValue"
+                               Text="100%"
+                               Margin="3,0,0,0"
+                               FontSize="{StaticResource Text.Percent.Size}"
+                               FontWeight="Medium"
+                               FontFamily="{StaticResource FontFamily.App}"
+                               Foreground="{DynamicResource Brush.OnSurface}"
+                               Typography.NumeralAlignment="Tabular"
                                TextWrapping="NoWrap"
-                               TextTrimming="CharacterEllipsis" />
-                </Border>
+                               VerticalAlignment="Baseline" />
+                </StackPanel>
 
-                <!-- Timestamp (outside DragRegion — clicking the timestamp never drags).
-                     Applied 26 DIP reset column (WidgetLayout.ResetW) so "now"/"6d" fit. -->
-                <TextBlock x:Name="TimestampText"
-                           Grid.Column="2"
+                <!-- StatusText — Phase 14 ROW-04..09 body line. Spans bar+number
+                     (DragRegion cols 1-2), right-aligned, muted, drag-capable.
+                     Visible only on non-figure states; collapsed on Ok/NearLimit/Stale
+                     with a figure. -->
+                <TextBlock x:Name="StatusText"
+                           Grid.Column="1"
+                           Grid.ColumnSpan="2"
                            Margin="6,0,0,0"
                            Text=""
                            Style="{StaticResource TextMutedStyle}"
@@ -188,25 +150,47 @@
                            HorizontalAlignment="Right"
                            TextWrapping="NoWrap"
                            TextTrimming="CharacterEllipsis"
-                           Visibility="Collapsed" />
+                           Cursor="Arrow"
+                           Visibility="Collapsed"
+                           AutomationProperties.LiveSetting="Polite" />
             </Grid>
 
-            <!-- STALE / ERROR / NO KEY / RE-LOGIN / UNSUPPORTED state badge (kept
-                 independent of the chip; collapsed by default). Ok/NearLimit already
-                 collapse it so those rows measure exactly 26. Phase 14 folds badge
-                 content into the row — Error/NotLoggedIn/Unsupported may still exceed
-                 26 until then (expected). -->
-            <Border x:Name="StateBadge"
-                    Style="{StaticResource StateBadgeStyle}"
-                    HorizontalAlignment="Left"
-                    Margin="0,4,0,0"
+            <!-- Window-type chip (outside DragRegion — clicking the chip never drags).
+                 Fill-only (no border), radius 3, padding 3,1 so WEEK/MONTH fit the
+                 applied 45 DIP column (WidgetLayout.ChipW, font-measure steal 8).
+                 DATA-02/all-windows-tooltip — ToolTip is set imperatively from Render. -->
+            <Border x:Name="ChipBorder"
+                    Grid.Column="1"
+                    Margin="6,0,0,0"
+                    Background="{DynamicResource Brush.Surface.Elevated}"
+                    CornerRadius="3"
+                    Padding="3,1"
                     Visibility="Collapsed"
-                    AutomationProperties.LiveSetting="Polite">
-                <TextBlock x:Name="StateBadgeText"
-                           Text=""
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    Cursor="Arrow">
+                <TextBlock x:Name="ChipText"
+                           Text="5H"
                            Style="{StaticResource TextMutedStyle}"
-                           Foreground="{DynamicResource Brush.OnSurface.Dimmed}" />
+                           Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
+                           HorizontalAlignment="Center"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis" />
             </Border>
-        </StackPanel>
+
+            <!-- Timestamp (outside DragRegion — clicking the timestamp never drags).
+                 Applied 26 DIP reset column (WidgetLayout.ResetW) so "now"/"6d" fit. -->
+            <TextBlock x:Name="TimestampText"
+                       Grid.Column="2"
+                       Margin="6,0,0,0"
+                       Text=""
+                       Style="{StaticResource TextMutedStyle}"
+                       Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Right"
+                       TextWrapping="NoWrap"
+                       TextTrimming="CharacterEllipsis"
+                       Visibility="Collapsed" />
+        </Grid>
     </Border>
 </UserControl>
