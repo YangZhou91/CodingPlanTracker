@@ -98,13 +98,13 @@ public static class QuotaRowFormatter
     };
 
     /// <summary>
-    /// UIR-04 tooltip line: "{ChipLabel}: {UsedPct:F0}% used" and, when ResetsAtUtc
-    /// is in the future, " · resets {local yyyy-MM-dd HH:mm}" (InvariantCulture).
-    /// No estimate sentence.
+    /// UIR-04 tooltip line: "{ChipLabel}: {RemainingPct:F0}% remaining / {UsedPct:F0}% used"
+    /// and, when ResetsAtUtc is in the future, " · resets {local yyyy-MM-dd HH:mm}"
+    /// (InvariantCulture). No estimate sentence.
     /// </summary>
     public static string FormatTooltipLine(WindowReading w, DateTimeOffset now)
     {
-        string line = $"{ChipLabel(w.Kind)}: {w.UsedPct:F0}% used";
+        string line = $"{ChipLabel(w.Kind)}: {w.RemainingPct:F0}% remaining / {w.UsedPct:F0}% used";
         if (w.ResetsAtUtc is DateTimeOffset reset && reset > now)
         {
             line += $" · resets {reset.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)}";
@@ -113,21 +113,59 @@ public static class QuotaRowFormatter
         return line;
     }
 
-    // ── DAT-01 / DAT-06 — remaining label/value (stubs — RED) ───────────────
+    // ── DAT-01 / DAT-06 — remaining label/value ──────────────────────────────
 
+    /// <summary>DAT-01 — the fixed Chinese prefix for the number column.</summary>
     public const string RemainingPrefix = "剩余";
 
-    public static string? FormatRemainingLabel(double? remainingPct) => null;
+    /// <summary>
+    /// DAT-01 — "剩余 {F0}%". Display precision F0. Caller supplies RemainingPct only
+    /// when HasFigure; never coerce null → 0 (DAT-06). Non-finite → null.
+    /// </summary>
+    public static string? FormatRemainingLabel(double? remainingPct)
+    {
+        if (remainingPct is not double r || !double.IsFinite(r))
+        {
+            return null;
+        }
 
-    public static string? FormatRemainingValue(double? remainingPct) => null;
+        return $"{RemainingPrefix} {Math.Clamp(r, 0, 100):F0}%";
+    }
 
-    public static bool IsLow(double? remainingPct) => false;
+    /// <summary>DAT-01 — value TextBlock only ("62%" / "100%"). Same guards as label.</summary>
+    public static string? FormatRemainingValue(double? remainingPct)
+    {
+        if (remainingPct is not double r || !double.IsFinite(r))
+        {
+            return null;
+        }
 
-    // ── ROW-08 — chip + stale suffix (stubs — RED) ──────────────────────────
+        return $"{Math.Clamp(r, 0, 100):F0}%";
+    }
 
-    public static string ChipWithStaleSuffix(WindowKind kind, bool stale) => ChipLabel(kind);
+    /// <summary>
+    /// DAT-05 — unrounded RemainingPct ≤ NearLimitRemainingThreshold (20). NaN/∞/null → false.
+    /// </summary>
+    public static bool IsLow(double? remainingPct)
+    {
+        return remainingPct is double r && double.IsFinite(r)
+            && r <= UsageReading.NearLimitRemainingThreshold;
+    }
 
-    // ── DAT-07 — last-update line (stubs — RED) ─────────────────────────────
+    // ── ROW-08 — chip + stale suffix ─────────────────────────────────────────
 
-    public static string FormatLastUpdateLine(DateTimeOffset fetchedAtUtc) => string.Empty;
+    /// <summary>ROW-08 — "WEEK" / "WEEK · 旧".</summary>
+    public static string ChipWithStaleSuffix(WindowKind kind, bool stale)
+    {
+        string chip = ChipLabel(kind);
+        return stale ? $"{chip} · 旧" : chip;
+    }
+
+    // ── DAT-07 — last-update line ────────────────────────────────────────────
+
+    /// <summary>DAT-07 — "Updated {local yyyy-MM-dd HH:mm}" (InvariantCulture).</summary>
+    public static string FormatLastUpdateLine(DateTimeOffset fetchedAtUtc)
+    {
+        return $"Updated {fetchedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
+    }
 }
