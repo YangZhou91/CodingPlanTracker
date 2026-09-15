@@ -542,14 +542,18 @@ public partial class SettingsWindow : Window
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            header.Children.Add(new TextBlock
+            var nameText = new TextBlock
             {
                 Text = adapter.DisplayName,
                 Style = (Style)owner.FindResource("TextBodyStyle"),
                 FontWeight = FontWeights.SemiBold,
-                Foreground = (Brush)owner.FindResource("Brush.OnSurface"),
                 VerticalAlignment = VerticalAlignment.Center,
-            });
+            };
+            // T-15-07 / debug settings-provider-name-missing — SetResourceReference so an
+            // open Settings window tracks the theme swap. FindResource bakes the brush at
+            // construction: dark OnSurface (#EDF4EF) stays near-white after Light apply.
+            nameText.SetResourceReference(TextBlock.ForegroundProperty, "Brush.OnSurface");
+            header.Children.Add(nameText);
 
             var toggle = new ToggleButton
             {
@@ -629,9 +633,9 @@ public partial class SettingsWindow : Window
             {
                 Text = _keyStore.BlobPathExists() ? "Saved ✓" : "No key",
                 Style = (Style)_owner.FindResource("TextLabelStyle"),
-                Foreground = (Brush)_owner.FindResource("Brush.OnSurface.Dimmed"),
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            _statusText.SetResourceReference(TextBlock.ForegroundProperty, "Brush.OnSurface.Dimmed");
             row.Children.Add(_statusText);
 
             var actions = new StackPanel
@@ -686,14 +690,15 @@ public partial class SettingsWindow : Window
             _keyInput.KeyDown += KeyInput_KeyDown;
             block.Children.Add(_keyInput);
 
-            block.Children.Add(new TextBlock
+            var hint = new TextBlock
             {
                 Text = "Stored encrypted with Windows DPAPI. PlanMeter never sends this key anywhere except api.z.ai.",
                 Style = (Style)_owner.FindResource("TextBodyStyle"),
-                Foreground = (Brush)_owner.FindResource("Brush.OnSurface.Dimmed"),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 8),
-            });
+            };
+            hint.SetResourceReference(TextBlock.ForegroundProperty, "Brush.OnSurface.Dimmed");
+            block.Children.Add(hint);
 
             var buttons = new StackPanel
             {
@@ -726,11 +731,11 @@ public partial class SettingsWindow : Window
             _inlineError = new TextBlock
             {
                 Style = (Style)_owner.FindResource("TextBodyStyle"),
-                Foreground = (Brush)_owner.FindResource("Brush.Error"),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 8, 0, 0),
                 Visibility = Visibility.Collapsed,
             };
+            _inlineError.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Error");
             block.Children.Add(_inlineError);
 
             return block;
@@ -741,13 +746,14 @@ public partial class SettingsWindow : Window
         {
             var block = new StackPanel { Orientation = Orientation.Vertical };
 
-            block.Children.Add(new TextBlock
+            var clearPrompt = new TextBlock
             {
                 Text = "Clear saved key?",
                 Style = (Style)_owner.FindResource("TextBodyStyle"),
-                Foreground = (Brush)_owner.FindResource("Brush.OnSurface"),
                 Margin = new Thickness(0, 0, 0, 8),
-            });
+            };
+            clearPrompt.SetResourceReference(TextBlock.ForegroundProperty, "Brush.OnSurface");
+            block.Children.Add(clearPrompt);
 
             var buttons = new StackPanel
             {
@@ -990,8 +996,8 @@ public partial class SettingsWindow : Window
             {
                 Text = "Not logged in",
                 Style = (Style)_owner.FindResource("TextLabelStyle"),
-                Foreground = (Brush)_owner.FindResource("Brush.OnSurface.Dimmed"),
             };
+            _oauthIdleStatus.SetResourceReference(TextBlock.ForegroundProperty, "Brush.OnSurface.Dimmed");
             block.Children.Add(_oauthIdleStatus);
 
             var loginButton = new Button
@@ -1015,8 +1021,8 @@ public partial class SettingsWindow : Window
             {
                 Text = "Waiting…",
                 Style = (Style)_owner.FindResource("TextLabelStyle"),
-                Foreground = (Brush)_owner.FindResource("Brush.OnSurface.Dimmed"),
             };
+            _oauthPendingStatus.SetResourceReference(TextBlock.ForegroundProperty, "Brush.OnSurface.Dimmed");
             block.Children.Add(_oauthPendingStatus);
 
             _oauthUserCodeBox = new TextBox
@@ -1035,10 +1041,10 @@ public partial class SettingsWindow : Window
             _oauthVerificationUrl = new TextBlock
             {
                 Style = (Style)_owner.FindResource("TextLabelStyle"),
-                Foreground = (Brush)_owner.FindResource("Brush.OnSurface.Dimmed"),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 2, 0, 0),
             };
+            _oauthVerificationUrl.SetResourceReference(TextBlock.ForegroundProperty, "Brush.OnSurface.Dimmed");
             block.Children.Add(_oauthVerificationUrl);
 
             var actions = new StackPanel
@@ -1073,13 +1079,14 @@ public partial class SettingsWindow : Window
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            row.Children.Add(new TextBlock
+            var loggedInText = new TextBlock
             {
                 Text = "Logged in ✓",
                 Style = (Style)_owner.FindResource("TextLabelStyle"),
-                Foreground = (Brush)_owner.FindResource("Brush.OnSurface.Dimmed"),
                 VerticalAlignment = VerticalAlignment.Center,
-            });
+            };
+            loggedInText.SetResourceReference(TextBlock.ForegroundProperty, "Brush.OnSurface.Dimmed");
+            row.Children.Add(loggedInText);
 
             var logoutButton = new Button
             {
