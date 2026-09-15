@@ -154,12 +154,18 @@ public sealed class ThemeTokenDictionaryTests
     }
 
     // T-15-06 — ThemeDictionaries is MC3074-forbidden (Phase 13 deviation). This pin
-    // guards against someone "simplifying" back to it.
+    // guards against someone "simplifying" back to it. Checks the XAML element tree,
+    // not raw text, so a comment mentioning the concept is allowed.
     [Fact]
     public void Generic_has_no_ThemeDictionaries()
     {
-        string generic = File.ReadAllText(ThemesPath("Generic.xaml"));
-        generic.Should().NotContain("ThemeDictionaries");
+        var doc = XDocument.Load(ThemesPath("Generic.xaml"));
+        var themeDictElements = doc.Descendants()
+            .Where(el => el.Name.LocalName == "ThemeDictionaries")
+            .ToList();
+
+        themeDictElements.Should().BeEmpty(
+            "ResourceDictionary.ThemeDictionaries is MC3074-forbidden in a Page-compiled app dictionary");
     }
 
     // T-15-06 / MC3074 — Generic must merge EXACTLY ONE token dictionary (Light OR Dark),
