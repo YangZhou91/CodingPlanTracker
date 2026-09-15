@@ -4,14 +4,12 @@ using System.Windows;
 namespace PlanMeter.App;
 
 /// <summary>
-/// THM-03 — replaces the Light.xaml / Dark.xaml entry inside Themes/Generic.xaml's
-/// MergedDictionaries. The theme-dictionary property element is MC3074-forbidden
-/// (Phase 13); this is the supported runtime path. Idempotent: re-applying the
-/// current theme is a no-op. Never touches App's outer Generic merge.
-///
-/// Source matching accepts both .xaml and .baml — WPF may rewrite the loaded
-/// ResourceDictionary.Source to the compiled .baml pack URI, which made a strict
-/// EndsWith("Light.xaml") miss and silently no-op the swap (dark never applied).
+/// THM-03 — swaps the App-level Light.xaml / Dark.xaml token dictionary.
+/// Brushes are merged at Application.Resources (not nested inside Generic) so this
+/// walk is a single-level replace. Accepts .xaml and .baml Source forms (WPF may
+/// rewrite to the compiled pack URI). Idempotent via ThemeSource.Set's Current guard;
+/// Apply itself always installs the requested dictionary when the token differs.
+/// UI-thread only.
 /// </summary>
 public static class ThemeApplier
 {
@@ -41,11 +39,9 @@ public static class ThemeApplier
     }
 
     /// <summary>
-    /// Swap Generic's inner Light/Dark token dictionary to the requested theme.
-    /// Walks Application.Resources.MergedDictionaries for the outer Generic entry,
-    /// then its MergedDictionaries for the inner Light/Dark entry.
-    /// No-op when Application.Current is null or the theme is already applied.
-    /// UI-thread only.
+    /// Replace the App-level Light/Dark token dictionary with the requested theme.
+    /// Also walks one nested Generic merge as a fallback for older layouts.
+    /// No-op when Application.Current is null.
     /// </summary>
     public static void Apply(bool dark)
     {
@@ -58,6 +54,13 @@ public static class ThemeApplier
         Uri target = ResolveUri(dark);
         string wantToken = dark ? "Dark" : "Light";
 
+        // Primary: App.Resources.MergedDictionaries token entry.
+        if (TrySwapInList(app.Resources, wantToken, target))
+        {
+            return;
+        }
+
+        // Fallback: nested inside a Generic merge (pre-15 layout).
         foreach (var outer in app.Resources.MergedDictionaries)
         {
             if (!SourceMatchesToken(outer.Source, "Generic"))
@@ -65,27 +68,46 @@ public static class ThemeApplier
                 continue;
             }
 
-            for (int i = 0; i < outer.MergedDictionaries.Count; i++)
+            if (TrySwapInList(outer, wantToken, target))
             {
-                var inner = outer.MergedDictionaries[i];
-                bool isLight = SourceMatchesToken(inner.Source, "Light");
-                bool isDark = SourceMatchesToken(inner.Source, "Dark");
-                if (!isLight && !isDark)
-                {
-                    continue;
-                }
-
-                // Already the requested token — idempotent (compare by name, not Uri ==).
-                string currentToken = isDark ? "Dark" : "Light";
-                if (string.Equals(currentToken, wantToken, StringComparison.Ordinal))
-                {
-                    return;
-                }
-
-                outer.MergedDictionaries[i] =
-                    new ResourceDictionary { Source = target };
-                return; // only one token dictionary is expected
+                return;
             }
         }
+    }
+
+    /// <summary>
+    /// Replace the first Light/Dark entry in <paramref name="owner"/>'s
+    /// MergedDictionaries with <paramref name="target"/>. Returns false when no token
+    /// dictionary is present. Always replaces when the installed token differs from
+    /// <paramref name="wantToken"/>.
+    /// </summary>
+    private static bool TrySwapInList(
+        ResourceDictionary owner,
+        string wantToken,
+        Uri target)
+    {
+        var list = owner.MergedDictionaries;
+        for (int i = 0; i < list.Count; i++)
+        {
+            var dict = list[i];
+            bool isLight = SourceMatchesToken(dict.Source, "Light");
+            bool isDark = SourceMatchesToken(dict.Source, "Dark");
+            if (!isLight && !isDark)
+            {
+                continue;
+            }
+
+            string currentToken = isDark ? "Dark" : "Light";
+            if (string.Equals(currentToken, wantToken, StringComparison.Ordinal))
+            {
+                // Already the requested token — leave the loaded dictionary in place.
+                return true;
+            }
+
+            list[i] = new ResourceDictionary { Source = target };
+            return true;
+        }
+
+        return false;
     }
 }

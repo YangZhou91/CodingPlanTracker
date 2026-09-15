@@ -117,18 +117,17 @@ public sealed class ThemeTokenDictionaryTests
     }
 
     [Fact]
-    public void Generic_merges_Light_without_key_and_has_no_inline_Brush_defs()
+    public void App_merges_Light_before_Generic_and_Generic_has_no_inline_Brush_defs()
     {
-        string generic = File.ReadAllText(ThemesPath("Generic.xaml"));
-
-        // Phase 13 wiring: Light.xaml is merged WITHOUT an x:Key so its Brush.* keys
-        // paint as normal application resources. ThemeDictionaries was the research
-        // Option A target, but ResourceDictionary.ThemeDictionaries is
-        // DesignerSerializationVisibility.Hidden and MC3074-rejects the property
-        // element in a Page-compiled app dictionary (see 13-01-SUMMARY deviation).
-        // Dark.xaml is still a compiled Page; Phase 15 swaps the merged entry.
-        generic.Should().Contain("Source=\"Light.xaml\"");
-        generic.Should().Contain("MergedDictionaries");
+        // Phase 15: token brushes merge at App.Resources so ThemeApplier swaps a
+        // single-level Light/Dark entry. Generic holds styles/spacing/type only.
+        string appXaml = File.ReadAllText(AppXamlPath());
+        appXaml.Should().Contain("Themes/Light.xaml");
+        appXaml.Should().Contain("Themes/Generic.xaml");
+        appXaml.IndexOf("Themes/Light.xaml", StringComparison.OrdinalIgnoreCase)
+            .Should().BeLessThan(
+                appXaml.IndexOf("Themes/Generic.xaml", StringComparison.OrdinalIgnoreCase),
+                "Light must merge before Generic");
 
         var doc = XDocument.Load(ThemesPath("Generic.xaml"));
         var inlineBrushes = doc.Descendants()
@@ -139,6 +138,37 @@ public sealed class ThemeTokenDictionaryTests
 
         inlineBrushes.Should().BeEmpty(
             "color brushes live in Light.xaml / Dark.xaml; Generic holds styles only");
+
+        // Generic must not nest a token dictionary (App owns the swap target).
+        var nestedTokenSources = doc.Descendants()
+            .SelectMany(el => el.Attributes())
+            .Where(a => a.Name.LocalName == "Source")
+            .Select(a => a.Value)
+            .Where(s =>
+                s.EndsWith("Light.xaml", StringComparison.OrdinalIgnoreCase) ||
+                s.EndsWith("Dark.xaml", StringComparison.OrdinalIgnoreCase) ||
+                s.EndsWith("Light.baml", StringComparison.OrdinalIgnoreCase) ||
+                s.EndsWith("Dark.baml", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        nestedTokenSources.Should().BeEmpty("Generic must not merge Light/Dark; App.xaml owns that");
+    }
+
+    private static string AppXamlPath()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            string candidate = Path.Combine(dir.FullName, "src", "PlanMeter.App", "App.xaml");
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException(
+            $"Could not locate src/PlanMeter.App/App.xaml walking up from {AppContext.BaseDirectory}");
     }
 
     [Fact]
@@ -168,12 +198,12 @@ public sealed class ThemeTokenDictionaryTests
             "ResourceDictionary.ThemeDictionaries is MC3074-forbidden in a Page-compiled app dictionary");
     }
 
-    // T-15-06 / MC3074 — Generic must merge EXACTLY ONE token dictionary (Light OR Dark),
-    // never both. ThemeApplier swaps this inner entry at runtime.
+    // T-15-06 — App.xaml merges exactly one token dictionary (Light at startup;
+    // ThemeApplier replaces that entry with Dark at runtime).
     [Fact]
-    public void Generic_merges_exactly_one_token_dictionary()
+    public void App_merges_exactly_one_token_dictionary()
     {
-        var doc = XDocument.Load(ThemesPath("Generic.xaml"));
+        var doc = XDocument.Load(AppXamlPath());
         var sourceAttrs = doc.Descendants()
             .SelectMany(el => el.Attributes())
             .Where(a => a.Name.LocalName == "Source")
@@ -182,8 +212,10 @@ public sealed class ThemeTokenDictionaryTests
 
         int tokenCount = sourceAttrs.Count(s =>
             s.EndsWith("Light.xaml", StringComparison.OrdinalIgnoreCase) ||
-            s.EndsWith("Dark.xaml", StringComparison.OrdinalIgnoreCase));
+            s.EndsWith("Dark.xaml", StringComparison.OrdinalIgnoreCase) ||
+            s.EndsWith("Light.baml", StringComparison.OrdinalIgnoreCase) ||
+            s.EndsWith("Dark.baml", StringComparison.OrdinalIgnoreCase));
 
-        tokenCount.Should().Be(1, "Generic must merge exactly one token dictionary (Light or Dark), not both");
+        tokenCount.Should().Be(1, "App must merge exactly one token dictionary (Light or Dark), not both");
     }
 }

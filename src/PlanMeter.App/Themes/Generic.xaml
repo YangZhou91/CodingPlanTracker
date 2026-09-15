@@ -3,15 +3,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
-    <!-- Color brushes live in Light.xaml / Dark.xaml (design B tokens).
-         Phase 13 wiring: merge Light.xaml WITHOUT an x:Key so its keys paint as
-         normal application resources. The theme-dictionary property element is
-         MC3074-forbidden in a Page-compiled app dictionary (see 13-01-SUMMARY
-         deviation). Phase 15 swaps THIS inner Light/Dark entry at runtime via
-         ThemeApplier (absolute pack:// URIs). Do not add Dark.xaml here. -->
-    <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="Light.xaml" />
-    </ResourceDictionary.MergedDictionaries>
+    <!-- Color brushes live in Light.xaml / Dark.xaml (design B tokens), merged at the
+         App.Resources level (App.xaml) so ThemeApplier can swap the token dictionary
+         without walking Generic's nested merges. Generic holds styles/spacing/type only.
+         StateBadgeStyle must use DynamicResource for brushes (StaticResource would bake
+         the first theme at parse time). Do not merge Light/Dark here. -->
 
     <!-- Spacing Scale (UI-SPEC §Spacing Scale). All values DIP at 96 DPI baseline. -->
     <sys:Double x:Key="Space.Xs">4</sys:Double>
@@ -64,7 +60,7 @@
     <!-- State badges (STALE / ERROR / NO KEY / RE-LOGIN / UNSUPPORTED) — Label-size,
          OnSurface.Dimmed, 1 DIP border. Same shell for every badge. -->
     <Style x:Key="StateBadgeStyle" TargetType="Border">
-        <Setter Property="BorderBrush" Value="{StaticResource Brush.Divider}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Divider}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="2" />
         <Setter Property="Padding" Value="4,1" />
