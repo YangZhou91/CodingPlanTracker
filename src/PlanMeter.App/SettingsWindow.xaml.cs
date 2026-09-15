@@ -459,6 +459,18 @@ public partial class SettingsWindow : Window
         }
     }
 
+    /// <summary>PlanMeter B title bar — drag the borderless settings window from the strip.</summary>
+    private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
+    }
+
+    /// <summary>PlanMeter B title bar — compact close control (no system chrome).</summary>
+    private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
+
     /// <summary>
     /// One provider card. For a key-managed provider (<see cref="IProviderAdapter.RequiresManualKey"/>,
     /// D-10): a key-status row (<c>Saved ✓</c> / <c>No key</c> + <c>Edit key…</c> /
