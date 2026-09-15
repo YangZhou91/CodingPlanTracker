@@ -162,6 +162,81 @@ public sealed class ConfigStoreTests
         configStore.TryRead(path)!.EnabledProviders!.Select(p => p.Value).Should().Equal("zai", "stub");
     }
 
+    // THM-03 — theme field round-trip (Phase 15).
+    [Fact]
+    public void Write_then_Read_round_trips_theme_dark()
+    {
+        using var dir = TempDir.Create();
+        string path = Path.Combine(dir.Path, "config.json");
+        var configStore = new ConfigStore();
+
+        configStore.Write(path, new ConfigData(600, new[] { Zai }, "dark"));
+
+        ConfigData? read = configStore.TryRead(path);
+        read.Should().NotBeNull();
+        read!.Theme.Should().Be("dark");
+    }
+
+    // THM-03 — an explicit null theme writes null and reads back as null (caller treats as light).
+    [Fact]
+    public void Write_with_null_theme_reads_as_null()
+    {
+        using var dir = TempDir.Create();
+        string path = Path.Combine(dir.Path, "config.json");
+        var configStore = new ConfigStore();
+
+        configStore.Write(path, new ConfigData(600, new[] { Zai }, null));
+
+        ConfigData? read = configStore.TryRead(path);
+        read.Should().NotBeNull();
+        read!.Theme.Should().BeNull("a null theme must round-trip as null (light)");
+    }
+
+    // THM-03 — an old file with no theme field reads Theme == null (zero migration).
+    [Fact]
+    public void Missing_theme_field_reads_as_null()
+    {
+        using var dir = TempDir.Create();
+        string path = Path.Combine(dir.Path, "config.json");
+        File.WriteAllText(path, "{ \"pollIntervalSeconds\": 600 }");
+        var configStore = new ConfigStore();
+
+        ConfigData? read = configStore.TryRead(path);
+        read.Should().NotBeNull();
+        read!.Theme.Should().BeNull("a missing theme field must read as null (caller treats as light)");
+    }
+
+    // THM-03 / T-15-05 — a non-string theme token must degrade the whole file to null
+    // (existing JsonException catch), never throw.
+    [Fact]
+    public void Non_string_theme_field_returns_null_without_throwing()
+    {
+        using var dir = TempDir.Create();
+        string path = Path.Combine(dir.Path, "config.json");
+        File.WriteAllText(path, "{ \"pollIntervalSeconds\": 600, \"theme\": 123 }");
+        var configStore = new ConfigStore();
+
+        ConfigData? read = configStore.TryRead(path);
+        read.Should().BeNull("a non-string theme must degrade to null, never throw (T-15-05)");
+    }
+
+    // THM-03 — theme round-trips alongside interval and enabled providers (T-15-02/03).
+    [Fact]
+    public void Theme_round_trip_persists_alongside_interval_and_enabled()
+    {
+        using var dir = TempDir.Create();
+        string path = Path.Combine(dir.Path, "config.json");
+        var configStore = new ConfigStore();
+
+        configStore.Write(path, new ConfigData(900, new[] { Zai, Stub }, "dark"));
+
+        ConfigData? read = configStore.TryRead(path);
+        read.Should().NotBeNull();
+        read!.PollIntervalSeconds.Should().Be(900);
+        read.EnabledProviders.Should().BeEquivalentTo(new[] { Zai, Stub });
+        read.Theme.Should().Be("dark");
+    }
+
     /// <summary>A disposable temp directory (never the real %LOCALAPPDATA% path).</summary>
     private sealed class TempDir : IDisposable
     {

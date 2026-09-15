@@ -152,4 +152,32 @@ public sealed class ThemeTokenDictionaryTests
         // TextLabelStyle must keep SemiBold for settings labels (decision 5).
         generic.Should().Contain("TextLabelStyle");
     }
+
+    // T-15-06 — ThemeDictionaries is MC3074-forbidden (Phase 13 deviation). This pin
+    // guards against someone "simplifying" back to it.
+    [Fact]
+    public void Generic_has_no_ThemeDictionaries()
+    {
+        string generic = File.ReadAllText(ThemesPath("Generic.xaml"));
+        generic.Should().NotContain("ThemeDictionaries");
+    }
+
+    // T-15-06 / MC3074 — Generic must merge EXACTLY ONE token dictionary (Light OR Dark),
+    // never both. ThemeApplier swaps this inner entry at runtime.
+    [Fact]
+    public void Generic_merges_exactly_one_token_dictionary()
+    {
+        var doc = XDocument.Load(ThemesPath("Generic.xaml"));
+        var sourceAttrs = doc.Descendants()
+            .SelectMany(el => el.Attributes())
+            .Where(a => a.Name.LocalName == "Source")
+            .Select(a => a.Value)
+            .ToList();
+
+        int tokenCount = sourceAttrs.Count(s =>
+            s.EndsWith("Light.xaml", StringComparison.OrdinalIgnoreCase) ||
+            s.EndsWith("Dark.xaml", StringComparison.OrdinalIgnoreCase));
+
+        tokenCount.Should().Be(1, "Generic must merge exactly one token dictionary (Light or Dark), not both");
+    }
 }
