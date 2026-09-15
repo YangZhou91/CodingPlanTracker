@@ -63,11 +63,18 @@ public sealed class WidgetLayoutTests
     }
 
     [Fact]
+    public void Applied_number_width_fits_remaining_100_label()
+    {
+        // 56 clipped leading 剩 after the 6 DIP gap; applied 64 holds 剩余 100%.
+        WidgetLayout.NumberW.Should().Be(64);
+        WidgetLayout.NameW.Should().Be(79);
+        (WidgetLayout.NumberW + WidgetLayout.ResetW).Should().Be(90);
+    }
+
+    [Fact]
     public void Applied_reset_width_fits_now_and_compact_days()
     {
         WidgetLayout.ResetW.Should().BeGreaterThanOrEqualTo(26);
-        WidgetLayout.NumberW.Should().Be(56);
-        (WidgetLayout.NumberW + WidgetLayout.ResetW).Should().Be(82);
     }
 
     [Fact]

@@ -32,17 +32,18 @@
 
             <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
                  here (WIDGET-02/drag; UI-SPEC §Drag region). Nested fixed columns:
-                 Name 87 | gap 6 | Bar 64 | gap 6 | Number 56 = 219
-                 (WidgetLayout.NameW/BarW/NumberW/ColGap/DragRegionWidth). -->
+                 Name 79 | gap 6 | Bar 64 | gap 6 | Number 64 = 219
+                 (WidgetLayout.NameW/BarW/NumberW/ColGap/DragRegionWidth).
+                 Number 64 so 剩余 100% fits after the 6 DIP gap margin. -->
             <Grid x:Name="DragRegion"
                   Grid.Column="0"
                   Background="Transparent"
                   Cursor="SizeAll"
                   MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="87" />
+                    <ColumnDefinition Width="79" />
                     <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="56" />
+                    <ColumnDefinition Width="64" />
                 </Grid.ColumnDefinitions>
 
                 <!-- Provider name + the persistent qualifier badge (F1/UI-SPEC).
@@ -108,9 +109,9 @@
                     </Grid>
                 </Grid>
 
-                <!-- Number column (applied 56 DIP, WidgetLayout.NumberW). DAT-01 remaining
+                <!-- Number column (applied 66 DIP, WidgetLayout.NumberW). DAT-01 remaining
                      label: two TextBlocks (prefix 11 muted + value 13 Medium tabular).
-                     Measured ≈54 DIP at 100%. NoWrap; optional CharacterEllipsis on value. -->
+                     66 DIP so 剩余 100% is not clipped after the 6 DIP gap margin. -->
                 <StackPanel x:Name="RemainingHost"
                             Grid.Column="2"
                             Margin="6,0,0,0"
@@ -125,7 +126,7 @@
                                VerticalAlignment="Center" />
                     <TextBlock x:Name="RemainingValue"
                                Text="100%"
-                               Margin="3,0,0,0"
+                               Margin="2,0,0,0"
                                FontSize="{StaticResource Text.Percent.Size}"
                                FontWeight="Medium"
                                FontFamily="{StaticResource FontFamily.App}"
