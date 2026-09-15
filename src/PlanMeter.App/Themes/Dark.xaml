@@ -2,8 +2,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- PlanMeter B dark tokens. Phase 13: compiled via Generic.xaml ThemeDictionaries
-         Dark key; not user-switchable until Phase 15. Same 11 Brush.* keys as Light. -->
+    <!-- PlanMeter B dark tokens. Merged by Generic.xaml via ThemeApplier pack:// swap
+         at runtime (Phase 15). Same 11 Brush.* keys as Light. -->
     <SolidColorBrush x:Key="Brush.Surface" Color="#222724" />
     <SolidColorBrush x:Key="Brush.Surface.Elevated" Color="#303A33" />
     <SolidColorBrush x:Key="Brush.Accent" Color="#88D3A4" />

@@ -68,6 +68,11 @@ public partial class SettingsWindow : Window
     /// CURRENT live value — never this source reverting to the stale startup one.</summary>
     private readonly PollIntervalSource _intervalSource;
 
+    /// <summary>THM-03 — the SHARED live theme authority (light|dark). The Appearance
+    /// combo pre-selects and writes it; every ConfigData write carries Current so a
+    /// toggle/interval write never clobbers the user's theme (T-15-02).</summary>
+    private readonly ThemeSource _themeSource;
+
     /// <summary>GROK-03 — Core device-flow service the Grok login card drives.</summary>
     private readonly GrokOAuthFlow _grokOAuthFlow;
 
@@ -82,6 +87,10 @@ public partial class SettingsWindow : Window
     /// re-attempt a doomed write.</summary>
     private bool _syncingIntervalSelection;
 
+    /// <summary>W7 — re-entrancy guard for the theme ComboBox's SelectionChanged handler
+    /// (same discipline as the interval guard).</summary>
+    private bool _syncingThemeSelection;
+
     public SettingsWindow(
         ProviderRegistry registry,
         Func<ProviderId, DpapiKeyStore> keyStoreFactory,
@@ -89,6 +98,7 @@ public partial class SettingsWindow : Window
         UsageStore store,
         ConfigStore configStore,
         PollIntervalSource intervalSource,
+        ThemeSource themeSource,
         GrokOAuthFlow grokOAuthFlow,
         GrokTokenManager grokTokenManager,
         BootShortcutManager bootShortcuts)
@@ -99,6 +109,7 @@ public partial class SettingsWindow : Window
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _configStore = configStore ?? throw new ArgumentNullException(nameof(configStore));
         _intervalSource = intervalSource ?? throw new ArgumentNullException(nameof(intervalSource));
+        _themeSource = themeSource ?? throw new ArgumentNullException(nameof(themeSource));
         _grokOAuthFlow = grokOAuthFlow ?? throw new ArgumentNullException(nameof(grokOAuthFlow));
         _grokTokenManager = grokTokenManager ?? throw new ArgumentNullException(nameof(grokTokenManager));
         _bootShortcuts = bootShortcuts ?? throw new ArgumentNullException(nameof(bootShortcuts));
@@ -119,6 +130,10 @@ public partial class SettingsWindow : Window
         // nearest preset. The handler is subscribed AFTER pre-selection so the ctor's
         // SelectedIndex assignment does not fire it (pre-selection is not a user action).
         BuildIntervalCombo();
+
+        // THM-03 — the Appearance card: build Light/Dark items and pre-select the live
+        // theme. Handler subscribed AFTER pre-select (same discipline as BuildIntervalCombo).
+        BuildThemeCombo();
 
         // BOOT-01 — derive the checkbox from File.Exists FIRST, then subscribe Click.
         // A programmatic set must not fire the handler (same discipline as BuildIntervalCombo).
@@ -183,11 +198,12 @@ public partial class SettingsWindow : Window
         var selected = TimeSpan.FromSeconds(seconds);
         try
         {
-            // Persist FIRST (atomic ConfigStore.Write), carrying the CURRENT enabled-set so
-            // the interval write never clobbers (or is clobbered by) the enabled state.
+            // Persist FIRST (atomic ConfigStore.Write), carrying the CURRENT enabled-set
+            // and the LIVE theme so the interval write never clobbers (or is clobbered by)
+            // the enabled state or the user's theme choice (T-15-02).
             _configStore.Write(
                 _configStore.DefaultConfigPath,
-                new ConfigData(seconds, _registry.Enabled.Select(p => p.Id).ToArray()));
+                new ConfigData(seconds, _registry.Enabled.Select(p => p.Id).ToArray(), _themeSource.Current));
         }
         catch (Exception)
         {
@@ -223,6 +239,82 @@ public partial class SettingsWindow : Window
         finally
         {
             _syncingIntervalSelection = false;
+        }
+    }
+
+    /// <summary>
+    /// THM-03 — build the Theme ComboBox items (Light → "light", Dark → "dark") and
+    /// pre-select from the live <see cref="ThemeSource.Current"/>. Handler subscribed
+    /// AFTER pre-select so the ctor assignment does not fire it.
+    /// </summary>
+    private void BuildThemeCombo()
+    {
+        ThemeCombo.Items.Add(new ComboBoxItem { Content = "Light", Tag = "light" });
+        ThemeCombo.Items.Add(new ComboBoxItem { Content = "Dark", Tag = "dark" });
+
+        int index = string.Equals(_themeSource.Current, "dark", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        ThemeCombo.SelectedIndex = index;
+
+        ThemeCombo.SelectionChanged += ThemeCombo_SelectionChanged;
+    }
+
+    /// <summary>
+    /// THM-03 / W3 — the theme selection handler. PERSIST-THEN-APPLY: writes the full
+    /// ConfigData (live interval + live enabled + new theme) via the atomic
+    /// <see cref="ConfigStore.Write"/> FIRST; only on success calls
+    /// <see cref="ThemeSource.Set"/> (dictionary swap + ThemeChanged → MainWindow
+    /// ReRenderAll). On ANY write failure the combo reverts to the live source (the
+    /// theme is NOT flipped) and the window-level error line shows.
+    /// </summary>
+    private void ThemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingThemeSelection)
+        {
+            return;
+        }
+
+        if (ThemeCombo.SelectedItem is not ComboBoxItem item || item.Tag is not string tag)
+        {
+            return;
+        }
+
+        try
+        {
+            // Persist FIRST — live interval + live enabled + selected theme (T-15-02/03).
+            _configStore.Write(
+                _configStore.DefaultConfigPath,
+                new ConfigData(
+                    (int)_intervalSource.Current.TotalSeconds,
+                    _registry.Enabled.Select(p => p.Id).ToArray(),
+                    tag));
+        }
+        catch (Exception)
+        {
+            // W3 revert — ThemeSource is NOT changed; re-select the live current theme
+            // and show the locked error line. Do NOT call ThemeSource.Set.
+            RevertThemeComboTo(_themeSource.Current);
+            WindowErrorLine.Visibility = Visibility.Visible;
+            return;
+        }
+
+        WindowErrorLine.Visibility = Visibility.Collapsed;
+
+        // Live-apply ONLY after the write succeeded (dictionary swap + ThemeChanged).
+        _themeSource.Set(tag);
+    }
+
+    /// <summary>W7 — restore the Theme combo to the live source, guarded against re-entry.</summary>
+    private void RevertThemeComboTo(string theme)
+    {
+        int index = string.Equals(theme, "dark", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        _syncingThemeSelection = true;
+        try
+        {
+            ThemeCombo.SelectedIndex = index;
+        }
+        finally
+        {
+            _syncingThemeSelection = false;
         }
     }
 
@@ -288,17 +380,18 @@ public partial class SettingsWindow : Window
             : _registry.Enabled.Where(p => p.Id != id).Select(p => p.Id).ToArray();
 
         // (2) persist FIRST — a failed write mutates neither registry nor poller (W3).
-        // CROSS-PLAN CONTRACT (03-03 → 03-04): the interval written alongside the
+        // CROSS-PLAN CONTRACT (03-03 → 03-04 → 15): the interval written alongside the
         // enabled-set is the LIVE shared source (_intervalSource.Current), NOT the stale
         // startup value — a toggle persisted after an interval change must carry the
         // CURRENT interval, or it silently reverts pollIntervalSeconds in config.json
-        // (clobbering the interval the user just set). The shared source is the single
-        // cadence authority (D-13/D-14).
+        // (clobbering the interval the user just set). Same discipline for the theme:
+        // carry ThemeSource.Current so a toggle never clobbers the user's theme choice
+        // (T-15-02). The shared sources are the single cadence/theme authorities.
         try
         {
             _configStore.Write(
                 _configStore.DefaultConfigPath,
-                new ConfigData((int)_intervalSource.Current.TotalSeconds, prospective));
+                new ConfigData((int)_intervalSource.Current.TotalSeconds, prospective, _themeSource.Current));
         }
         catch (Exception)
         {
@@ -425,15 +518,17 @@ public partial class SettingsWindow : Window
             _adapter = adapter;
             _keyStore = owner._keyStoreFactory(adapter.Id);
 
+            // T-15-07 — SetResourceReference so an open Settings window tracks the
+            // theme swap (FindResource would bake the brush at construction).
             Root = new Border
             {
-                Background = (Brush)owner.FindResource("Brush.Surface.Elevated"),
-                BorderBrush = (Brush)owner.FindResource("Brush.Divider"),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(2),
                 Padding = new Thickness(12, 8, 12, 8),
                 Margin = new Thickness(0, 0, 0, 8),
             };
+            Root.SetResourceReference(Border.BackgroundProperty, "Brush.Surface.Elevated");
+            Root.SetResourceReference(Border.BorderBrushProperty, "Brush.Divider");
 
             var cardContent = new StackPanel { Orientation = Orientation.Vertical };
 

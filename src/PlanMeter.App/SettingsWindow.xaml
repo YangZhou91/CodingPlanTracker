@@ -107,6 +107,44 @@
             </StackPanel>
         </Border>
 
+        <!-- THM-03 — Appearance / theme. Live-apply; persists in config.json. After
+             Startup (app-shell concerns adjacent). -->
+        <Rectangle Height="{StaticResource Space.3Xl}" />
+        <TextBlock Text="Appearance"
+                   Style="{StaticResource TextBodyStyle}"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource Brush.OnSurface}"
+                   Margin="0,0,0,8" />
+        <Border Background="{DynamicResource Brush.Surface.Elevated}"
+                BorderBrush="{DynamicResource Brush.Divider}"
+                BorderThickness="1"
+                CornerRadius="2"
+                Padding="12,8,12,8"
+                Margin="0,0,0,8">
+            <StackPanel Orientation="Vertical">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Theme"
+                               Style="{StaticResource TextBodyStyle}"
+                               Foreground="{DynamicResource Brush.OnSurface}"
+                               VerticalAlignment="Center" />
+                    <ComboBox x:Name="ThemeCombo"
+                              Grid.Column="1"
+                              Width="96"
+                              VerticalAlignment="Center"
+                              AutomationProperties.Name="Theme" />
+                </Grid>
+                <TextBlock Text="Applies immediately. Saved for the next launch."
+                           Style="{StaticResource TextBodyStyle}"
+                           Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
+                           TextWrapping="Wrap"
+                           Margin="0,8,0,0" />
+            </StackPanel>
+        </Border>
+
         <!-- W1 window-level error line (Body 13, Brush.Error, collapsed by default).
              Shown only on a config.json write failure in Plan 03-03/03-04; included now
              so later plans consume it. SEC-03: error copy never carries a key/URL/header/body. -->

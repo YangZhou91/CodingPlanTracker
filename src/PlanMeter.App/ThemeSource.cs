@@ -8,11 +8,10 @@ namespace PlanMeter.App;
 /// ("light" | "dark"); null/missing/unknown degrade to light at Seed/Set time.
 ///
 /// Seed is startup-only (no event — the window is not built yet). Set normalizes,
-/// no-ops when unchanged, and raises <see cref="ThemeChanged"/> so MainWindow can
-/// re-render FindResource paint sites after ThemeApplier.Apply.
+/// no-ops when unchanged, calls ThemeApplier.Apply, and raises ThemeChanged so
+/// MainWindow can re-render FindResource paint sites after the dictionary swap.
 ///
-/// ThemeApplier.Apply is called from Set once Task 2 wires the WPF applier; startup
-/// uses Seed + a separate ThemeApplier.Apply (Seed never fires the event / never applies).
+/// Startup uses Seed + a separate ThemeApplier.Apply (Seed never fires the event).
 /// </summary>
 public sealed class ThemeSource
 {
@@ -36,8 +35,8 @@ public sealed class ThemeSource
 
     /// <summary>
     /// Live-apply a user-selected theme. Normalizes; no-ops when unchanged; sets
-    /// Current; raises <see cref="ThemeChanged"/>. ThemeApplier.Apply is wired in
-    /// Task 2 (called from here after Current is set).
+    /// Current; calls <see cref="ThemeApplier.Apply"/>; raises <see cref="ThemeChanged"/>.
+    /// Startup uses Seed + a separate ThemeApplier.Apply (Seed never fires the event).
     /// </summary>
     public void Set(string theme)
     {
@@ -48,6 +47,7 @@ public sealed class ThemeSource
         }
 
         Current = normalized;
+        ThemeApplier.Apply(IsDark);
         ThemeChanged?.Invoke();
     }
 

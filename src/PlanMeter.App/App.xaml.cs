@@ -265,6 +265,12 @@ public partial class App : Application
                 services.AddSingleton(sp =>
                     new PollIntervalSource(TimeSpan.FromSeconds(sp.GetRequiredService<PlanMeterConfig>().IntervalSeconds)));
 
+                // THM-03 — the live theme authority (light|dark). Seeded from config.json
+                // at startup; Settings Appearance card Set's it live (persist-then-apply).
+                // Every ConfigData write reads Current so a toggle/interval write never
+                // clobbers the user's theme choice (T-15-02).
+                services.AddSingleton<ThemeSource>();
+
                 services.AddSingleton<BootShortcutManager>();
 
                 // The reference adapter + the keyed observable store.
@@ -423,9 +429,17 @@ public partial class App : Application
         var grokOAuthFlow = _host.Services.GetRequiredService<GrokOAuthFlow>();
         var grokTokenManager = _host.Services.GetRequiredService<GrokTokenManager>();
         var bootShortcuts = _host.Services.GetRequiredService<BootShortcutManager>();
+        var themeSource = _host.Services.GetRequiredService<ThemeSource>();
+
+        // THM-03 / T-15-04 — apply the stored theme BEFORE MainWindow.Show so there is
+        // no light flash when dark is stored. Seed never fires ThemeChanged (window not
+        // built yet); ThemeApplier.Apply is the explicit paint.
+        ConfigData? startupConfig = configStore.TryRead(configStore.DefaultConfigPath);
+        themeSource.Seed(startupConfig?.Theme);
+        ThemeApplier.Apply(themeSource.IsDark);
 
         // Show the focus-safe topmost shell. MainWindow takes the generalized services.
-        var window = new MainWindow(registry, pollers, store, keyStoreFactory, refreshGate, configStore, intervalSource, grokOAuthFlow, grokTokenManager, bootShortcuts);
+        var window = new MainWindow(registry, pollers, store, keyStoreFactory, refreshGate, configStore, intervalSource, themeSource, grokOAuthFlow, grokTokenManager, bootShortcuts);
         MainWindow = window;
         window.Show();
 

@@ -56,6 +56,11 @@ public partial class MainWindow : Window
     /// scheduled poll without a restart (SC#3). One instance serves ALL providers.</summary>
     private readonly PollIntervalSource _intervalSource;
 
+    /// <summary>THM-03 — the live theme authority. Subscribes ThemeChanged → ReRenderAll
+    /// so FindResource paint sites pick up the new brushes after a dictionary swap
+    /// (T-15-01). Handed to the settings window's Appearance card.</summary>
+    private readonly ThemeSource _themeSource;
+
     /// <summary>GROK-03 — forwarded to the settings Grok login card.</summary>
     private readonly GrokOAuthFlow _grokOAuthFlow;
 
@@ -83,6 +88,7 @@ public partial class MainWindow : Window
         GlobalRefreshGate refreshGate,
         ConfigStore configStore,
         PollIntervalSource intervalSource,
+        ThemeSource themeSource,
         GrokOAuthFlow grokOAuthFlow,
         GrokTokenManager grokTokenManager,
         BootShortcutManager bootShortcuts)
@@ -97,6 +103,7 @@ public partial class MainWindow : Window
         _bootShortcuts = bootShortcuts ?? throw new ArgumentNullException(nameof(bootShortcuts));
         _configStore = configStore ?? throw new ArgumentNullException(nameof(configStore));
         _intervalSource = intervalSource ?? throw new ArgumentNullException(nameof(intervalSource));
+        _themeSource = themeSource ?? throw new ArgumentNullException(nameof(themeSource));
 
         InitializeComponent();
 
@@ -221,6 +228,9 @@ public partial class MainWindow : Window
         // Subscribe to the store and render the current reading (if any).
         _store.Changed += OnStoreChanged;
 
+        // THM-03 / T-15-01 — re-render FindResource paint sites after a theme swap.
+        _themeSource.ThemeChanged += OnThemeChanged;
+
         if (_rows.Count == 0)
         {
             // Empty-stack state already shown by BuildRowStack; nothing to render.
@@ -230,6 +240,22 @@ public partial class MainWindow : Window
         // Initial render: pull one snapshot and render every row from its own slot; rows
         // without a terminal reading enter their own loading state (static rows and
         // keyless manual-key rows render terminal instead — see RenderRowInitial).
+        ReRenderAll();
+    }
+
+    /// <summary>
+    /// THM-03 / T-15-01 — re-run the OnLoaded snapshot/RenderRowInitial loop for every
+    /// row so FindResource paint sites (QuotaFill.Background, RemainingValue.Foreground,
+    /// StatusText.Foreground) pick up the new brushes after a ThemeApplier.Apply swap.
+    /// Called from OnLoaded (startup) and OnThemeChanged (live Settings flip).
+    /// </summary>
+    internal void ReRenderAll()
+    {
+        if (_rows.Count == 0)
+        {
+            return;
+        }
+
         var snapshot = _store.Snapshot();
         var currentById = new Dictionary<ProviderId, UsageReading?>();
         foreach (var snap in snapshot)
@@ -242,6 +268,9 @@ public partial class MainWindow : Window
             RenderRowInitial(row, currentById.TryGetValue(row.Id, out var current) ? current : null);
         }
     }
+
+    /// <summary>THM-03 — theme swap callback. ThemeSource.Set is UI-thread only this cycle.</summary>
+    private void OnThemeChanged() => ReRenderAll();
 
     /// <summary>
     /// The manifest-driven initial render for one row (shared by the startup snapshot pass
@@ -464,7 +493,7 @@ public partial class MainWindow : Window
     {
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow(_registry, _keyStoreFactory, _pollers, _store, _configStore, _intervalSource, _grokOAuthFlow, _grokTokenManager, _bootShortcuts)
+            _settingsWindow = new SettingsWindow(_registry, _keyStoreFactory, _pollers, _store, _configStore, _intervalSource, _themeSource, _grokOAuthFlow, _grokTokenManager, _bootShortcuts)
             {
                 // Owned windows render above their owner (the strip); NOT a second topmost
                 // HWND. Closing the widget (Quit) closes the owned window.
@@ -510,6 +539,7 @@ public partial class MainWindow : Window
     {
         _store.Changed -= OnStoreChanged;
         _registry.EnabledChanged -= OnEnabledChanged;
+        _themeSource.ThemeChanged -= OnThemeChanged;
     }
 
     /// <summary>
@@ -528,17 +558,7 @@ public partial class MainWindow : Window
         // D-08 — a re-enabled STATIC row must re-render TERMINAL, not loading (no poller
         // exists for it, so a loading affordance would never resolve). Re-run the same
         // manifest-driven initial render the startup pass uses for every row.
-        var snapshot = _store.Snapshot();
-        var currentById = new Dictionary<ProviderId, UsageReading?>();
-        foreach (var snap in snapshot)
-        {
-            currentById[snap.Id] = snap.Current;
-        }
-
-        foreach (var row in _rows.Values)
-        {
-            RenderRowInitial(row, currentById.TryGetValue(row.Id, out var current) ? current : null);
-        }
+        ReRenderAll();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
