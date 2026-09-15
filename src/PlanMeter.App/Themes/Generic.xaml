@@ -5,12 +5,10 @@
 
     <!-- Color brushes live in Light.xaml / Dark.xaml (design B tokens).
          Phase 13 wiring: merge Light.xaml WITHOUT an x:Key so its keys paint as
-         normal application resources. ThemeDictionaries was the research Option A
-         target, but ResourceDictionary.ThemeDictionaries is
-         DesignerSerializationVisibility.Hidden and MC3074-rejects the property
-         element in a Page-compiled app dictionary (see 13-01-SUMMARY deviation).
-         Dark.xaml is still a compiled Page; Phase 15 swaps the merged entry at
-         runtime for user-controlled theme persistence. -->
+         normal application resources. The theme-dictionary property element is
+         MC3074-forbidden in a Page-compiled app dictionary (see 13-01-SUMMARY
+         deviation). Phase 15 swaps THIS inner Light/Dark entry at runtime via
+         ThemeApplier (absolute pack:// URIs). Do not add Dark.xaml here. -->
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="Light.xaml" />
     </ResourceDictionary.MergedDictionaries>

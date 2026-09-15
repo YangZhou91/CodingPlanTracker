@@ -9,19 +9,24 @@ namespace PlanMeter.Core.Config;
 
 /// <summary>
 /// D-15 — the on-disk config shape the settings window reads AND writes:
-/// <c>{ "pollIntervalSeconds": 600, "enabledProviders": ["zai"] }</c>. A NULL
-/// <see cref="EnabledProviders"/> means "not configured / all enabled" (the old
+/// <c>{ "pollIntervalSeconds": 600, "enabledProviders": ["zai"], "theme": "dark" }</c>.
+/// A NULL <see cref="EnabledProviders"/> means "not configured / all enabled" (the old
 /// <c>{ "pollIntervalSeconds": N }</c> shape the read tolerates); an EMPTY list means
-/// "all disabled" (an explicit user choice). The credential NEVER appears in this record
-/// or the serialized file (SEC-04) — keys live only in per-provider DPAPI blobs.
+/// "all disabled" (an explicit user choice). A NULL/missing <see cref="Theme"/> means
+/// light (THM-03 — zero migration for existing files). The credential NEVER appears in
+/// this record or the serialized file (SEC-04) — keys live only in per-provider DPAPI blobs.
 /// </summary>
 /// <param name="PollIntervalSeconds">The polling interval in seconds (clamped by
 /// <see cref="PlanMeterConfigLoader"/> at startup; the settings window writes the startup value).</param>
 /// <param name="EnabledProviders">The enabled provider ids, or null when not configured
 /// (all enabled).</param>
+/// <param name="Theme">The user-selected theme token (<c>"light"</c> | <c>"dark"</c>),
+/// or null when not configured (caller treats as light). Optional third param — existing
+/// 2-arg call sites still compile (THM-03, Phase 15).</param>
 public sealed record ConfigData(
     [property: JsonPropertyName("pollIntervalSeconds")] int PollIntervalSeconds,
-    [property: JsonPropertyName("enabledProviders")] IReadOnlyList<ProviderId>? EnabledProviders);
+    [property: JsonPropertyName("enabledProviders")] IReadOnlyList<ProviderId>? EnabledProviders,
+    [property: JsonPropertyName("theme")] string? Theme = null);
 
 /// <summary>
 /// D-15 — the read/write companion to the Phase-2 read-only
