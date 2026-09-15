@@ -122,7 +122,7 @@
                                Text="剩余"
                                Style="{StaticResource TextMutedStyle}"
                                Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
-                               VerticalAlignment="Baseline" />
+                               VerticalAlignment="Center" />
                     <TextBlock x:Name="RemainingValue"
                                Text="100%"
                                Margin="3,0,0,0"
@@ -132,7 +132,7 @@
                                Foreground="{DynamicResource Brush.OnSurface}"
                                Typography.NumeralAlignment="Tabular"
                                TextWrapping="NoWrap"
-                               VerticalAlignment="Baseline" />
+                               VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- StatusText — Phase 14 ROW-04..09 body line. Spans bar+number
