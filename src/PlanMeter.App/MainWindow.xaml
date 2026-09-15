@@ -25,14 +25,25 @@
          x:Shared="False" each row owns its own menu instance, so the insertion never
          leaks across rows. Key management lives in the settings window (D-01). -->
     <Window.Resources>
-        <ContextMenu x:Key="GlobalMenu" x:Shared="False">
+        <!-- PlanMeter B chrome (260915-gny): rounded token menu; handlers unchanged. -->
+        <ContextMenu x:Key="GlobalMenu"
+                     x:Shared="False"
+                     Style="{StaticResource PlanMeterContextMenu}">
             <MenuItem Header="Refresh now"
+                      Style="{StaticResource PlanMeterMenuItem}"
                       Click="RefreshNow_Click"
                       ToolTip="Fetches every provider now, no more than once per minute." />
-            <Separator />
-            <MenuItem Header="About PlanMeter" Click="About_Click" />
-            <MenuItem Header="Settings…" Click="Settings_Click" ToolTip="Manage providers, keys, and the polling interval." />
-            <MenuItem Header="Quit" Click="Quit_Click" />
+            <Separator Style="{StaticResource PlanMeterSeparator}" />
+            <MenuItem Header="About PlanMeter"
+                      Style="{StaticResource PlanMeterMenuItem}"
+                      Click="About_Click" />
+            <MenuItem Header="Settings…"
+                      Style="{StaticResource PlanMeterMenuItem}"
+                      Click="Settings_Click"
+                      ToolTip="Manage providers, keys, and the polling interval." />
+            <MenuItem Header="Quit"
+                      Style="{StaticResource PlanMeterMenuItem}"
+                      Click="Quit_Click" />
         </ContextMenu>
     </Window.Resources>
 

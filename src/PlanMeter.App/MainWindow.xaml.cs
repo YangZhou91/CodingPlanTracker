@@ -164,6 +164,7 @@ public partial class MainWindow : Window
                 var consoleItem = new MenuItem
                 {
                     Header = $"Open {adapter.DisplayName} console",
+                    Style = (Style)FindResource("PlanMeterMenuItem"),
                     Visibility = adapter.ConsoleUrl is null
                         ? Visibility.Collapsed
                         : Visibility.Visible,
