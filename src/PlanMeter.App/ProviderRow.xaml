@@ -31,18 +31,18 @@
             </Grid.ColumnDefinitions>
 
             <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
-                 here (WIDGET-02/drag; UI-SPEC §Drag region). Nested fixed columns:
-                 Name 79 | gap 6 | Bar 64 | gap 6 | Number 64 = 219.
-                 Name text is right-aligned so short names (Z.ai) sit against the bar;
-                 slack stays on the left, not a hole before the meter. -->
+                 here (WIDGET-02/drag; UI-SPEC §Drag region). Nested columns:
+                 Name Auto (max 79, left-aligned) | gap 6 | Bar * (min 48) | gap 6 |
+                 Number 64 = 219. Short names hug the left edge; the bar follows
+                 immediately so there is no fixed-column hole on the name's right. -->
             <Grid x:Name="DragRegion"
                   Grid.Column="0"
                   Background="Transparent"
                   Cursor="SizeAll"
                   MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="79" />
-                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="Auto" MaxWidth="79" />
+                    <ColumnDefinition Width="*" MinWidth="48" />
                     <ColumnDefinition Width="64" />
                 </Grid.ColumnDefinitions>
 
@@ -51,7 +51,7 @@
                      QualifierText (code-behind), NOT from a render state. -->
                 <StackPanel Grid.Column="0"
                             Orientation="Horizontal"
-                            HorizontalAlignment="Right"
+                            HorizontalAlignment="Left"
                             MaxWidth="79"
                             VerticalAlignment="Center">
                     <TextBlock x:Name="ProviderText"
