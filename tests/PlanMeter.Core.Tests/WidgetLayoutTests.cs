@@ -65,10 +65,10 @@ public sealed class WidgetLayoutTests
     [Fact]
     public void Applied_number_width_fits_remaining_100_label()
     {
-        // 56 clipped leading 剩 after the 6 DIP gap; applied 64 holds 剩余 100%.
-        WidgetLayout.NumberW.Should().Be(64);
+        // Remaining lives in the star region after the bar (87 at Name 56).
+        WidgetLayout.NumberW.Should().Be(87);
         WidgetLayout.NameW.Should().Be(56);
-        (WidgetLayout.NumberW + WidgetLayout.ResetW).Should().Be(90);
+        (WidgetLayout.NumberW + WidgetLayout.ResetW).Should().Be(113);
     }
 
     [Fact]
