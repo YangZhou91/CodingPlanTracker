@@ -32,9 +32,10 @@
 
             <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
                  here (WIDGET-02/drag; UI-SPEC §Drag region). Nested columns:
-                 Name Auto (max 79, left-aligned) | gap 6 | Bar * (min 48) | gap 6 |
-                 Number 64 = 219. Short names hug the left edge; the bar follows
-                 immediately so there is no fixed-column hole on the name's right. -->
+                 Name Auto (max 79) | Bar 64 fixed | spacer * | Number 64 = 219.
+                 Name is left-aligned; the bar is always WidgetLayout.BarW long and
+                 sits 6 DIP after the name — leftover width goes between bar and
+                 number, not as a hole after short names. -->
             <Grid x:Name="DragRegion"
                   Grid.Column="0"
                   Background="Transparent"
@@ -42,7 +43,8 @@
                   MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" MaxWidth="79" />
-                    <ColumnDefinition Width="*" MinWidth="48" />
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="64" />
                 </Grid.ColumnDefinitions>
 
@@ -116,7 +118,7 @@
                      label: two TextBlocks (prefix 11 muted + value 13 Medium tabular).
                      66 DIP so 剩余 100% is not clipped after the 6 DIP gap margin. -->
                 <StackPanel x:Name="RemainingHost"
-                            Grid.Column="2"
+                            Grid.Column="3"
                             Margin="6,0,0,0"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
@@ -139,13 +141,13 @@
                                VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- StatusText — Phase 14 ROW-04..09 body line. Spans bar+number
-                     (DragRegion cols 1-2), right-aligned, muted, drag-capable.
+                <!-- StatusText — Phase 14 ROW-04..09 body line. Spans bar+spacer+number
+                     (DragRegion cols 1-3), right-aligned, muted, drag-capable.
                      Visible only on non-figure states; collapsed on Ok/NearLimit/Stale
                      with a figure. -->
                 <TextBlock x:Name="StatusText"
                            Grid.Column="1"
-                           Grid.ColumnSpan="2"
+                           Grid.ColumnSpan="3"
                            Margin="6,0,0,0"
                            Text=""
                            Style="{StaticResource TextMutedStyle}"
