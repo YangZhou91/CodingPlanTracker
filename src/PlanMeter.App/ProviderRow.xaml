@@ -31,18 +31,18 @@
             </Grid.ColumnDefinitions>
 
             <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
-                 here (WIDGET-02/drag; UI-SPEC §Drag region). Nested fixed columns:
-                 Name 79 | gap 6 | Bar 64 | gap 6 | Number 64 = 219
-                 (WidgetLayout.NameW/BarW/NumberW/ColGap/DragRegionWidth).
-                 Number 64 so 剩余 100% fits after the 6 DIP gap margin. -->
+                 here (WIDGET-02/drag; UI-SPEC §Drag region). Nested columns:
+                 Name Auto (max 79) | gap 6 | Bar * (min 48) | gap 6 | Number 64 = 219.
+                 Short names (Z.ai) no longer leave a fixed 79 DIP hole before the bar —
+                 the bar grows into leftover name width; long names ellipsize at 79. -->
             <Grid x:Name="DragRegion"
                   Grid.Column="0"
                   Background="Transparent"
                   Cursor="SizeAll"
                   MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="79" />
-                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="Auto" MaxWidth="79" />
+                    <ColumnDefinition Width="*" MinWidth="48" />
                     <ColumnDefinition Width="64" />
                 </Grid.ColumnDefinitions>
 
@@ -60,6 +60,7 @@
                                Foreground="{DynamicResource Brush.OnSurface}"
                                VerticalAlignment="Center"
                                TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis"
                                AutomationProperties.Name="Z.ai" />
                     <Border x:Name="QualifierBadge"
                             Style="{StaticResource StateBadgeStyle}"
