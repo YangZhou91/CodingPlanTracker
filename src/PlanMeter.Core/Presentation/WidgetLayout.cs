@@ -1,15 +1,10 @@
 namespace PlanMeter.Core.Presentation;
 
 /// <summary>
-/// LAY-01..04 / THM-05 / THM-06 — PlanMeter B chrome geometry (DIP @ 96).
-/// No WPF types: XAML sites cite these constants in comments; a later x:Static pass
-/// can bind them without touching the formulas.
+/// Applied PlanMeter B chrome geometry (DIP @ 96) after live font-measure tweaks.
+/// No WPF types: XAML sites cite these constants in comments.
 ///
-/// Design base was Name 87 / Bar 72 / Chip 37 / Number 60 / Reset 22. Live measure:
-/// chip +8 (WEEK/MONTH), reset +4 ("now"), number +4 and name −8 so 剩余 100% fits
-/// after the 6 DIP gap. bar+chip stays 109; window stays 320.
-///
-/// Width formula:  border(2) + pad(16) + cols(56+64+87+45+26=278) + gaps(6×4=24) = 320
+/// Width formula:  border(2) + pad(16) + cols(56+64+64+45+26=255) + gaps(6×4=24) = 297
 /// Height formula: border(2) + pad(12) + rows(26×N); N=5 → 144
 /// </summary>
 public static class WidgetLayout
@@ -20,25 +15,25 @@ public static class WidgetLayout
     public const double PadV = 6;
     public const double RowHeight = 26;
     public const double ColGap = 6;
-    /// <summary>Applied name column (design 87 − 31) — short gap before the bar; long names ellipsize.</summary>
+    /// <summary>Name column — short labels leave a small gap before the bar.</summary>
     public const double NameW = 56;
-    /// <summary>Applied bar column (design 72 − 8 steal for chip).</summary>
+    /// <summary>Quota bar column (left-aligned, fixed length).</summary>
     public const double BarW = 64;
-    /// <summary>Star remaining region after the bar (was a fixed 64 number col).</summary>
-    public const double NumberW = 87;
-    /// <summary>Applied chip column (design 37 + 8 steal) so WEEK/MONTH fit.</summary>
+    /// <summary>Remaining label region after the bar (剩余 100% fits).</summary>
+    public const double NumberW = 64;
+    /// <summary>Period chip column so WEEK/MONTH fit.</summary>
     public const double ChipW = 45;
-    /// <summary>Applied reset column (design 22 + 4 steal) so "now"/"6d" fit.</summary>
+    /// <summary>Compact reset column so "now"/"6d" fit.</summary>
     public const double ResetW = 26;
     public const double BarHeight = 4;
     public const double BarRadius = 3;
     public const int StandardRowCount = 5;
 
-    /// <summary>Name + bar + number + chip + reset + four 6 DIP gaps = 302.</summary>
+    /// <summary>Name + bar + remaining + chip + reset + four 6 DIP gaps = 279.</summary>
     public static double ContentWidth =>
         NameW + BarW + NumberW + ChipW + ResetW + 4 * ColGap;
 
-    /// <summary>Content + two pads + two borders = 320.</summary>
+    /// <summary>Content + two pads + two borders = 297.</summary>
     public static double WindowWidth =>
         ContentWidth + 2 * PadH + 2 * Border;
 
@@ -46,7 +41,7 @@ public static class WidgetLayout
     public static double WindowHeight(int rows) =>
         rows * RowHeight + 2 * PadV + 2 * Border;
 
-    /// <summary>Name + gap + bar + gap + number = 219 (REG-02 drag hit target).</summary>
+    /// <summary>Name + gap + bar + gap + remaining = 196 (REG-02 drag hit target).</summary>
     public static double DragRegionWidth =>
         NameW + ColGap + BarW + ColGap + NumberW;
 

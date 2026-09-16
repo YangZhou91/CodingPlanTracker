@@ -4,7 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignWidth="302">
+             d:DesignWidth="279">
 
     <!-- D-23 / LAY-03 — the PlanMeter B single-row chrome. Fixed 26 DIP height
          includes the 1 DIP bottom stroke (last row thickness 0). Widths cite
@@ -16,23 +16,17 @@
             BorderBrush="{DynamicResource Brush.Divider}"
             BorderThickness="0,0,0,0">
 
-        <!-- ROW (outer Grid). Columns: DragRegion 219 | gap 6 | Chip 45 | gap 6 | Reset 26
-             = 302 content (WidgetLayout.DragRegionWidth / ChipW / ResetW / ColGap).
-             Applied widths are font-measured: chip +8 from bar (WEEK/MONTH), reset +4
-             from number ("now"). bar+chip stays 109; window stays 320.
-             DragRegion = provider name + bar + number only (REG-02); chip and
-             timestamp live OUTSIDE DragRegion so clicks there never initiate a drag.
-             SharedSizeGroup is gone (T-13-02) — fixed widths + TextTrimming. -->
+        <!-- ROW (outer Grid). Columns: DragRegion 196 | gap 6 | Chip 45 | gap 6 | Reset 26
+             = 279 content. Name 56 | Bar 64 | Remaining 64 inside DragRegion.
+             Chip and timestamp live OUTSIDE DragRegion so clicks never start a drag. -->
         <Grid x:Name="RowOuter">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="219" />
+                <ColumnDefinition Width="196" />
                 <ColumnDefinition Width="45" />
                 <ColumnDefinition Width="26" />
             </Grid.ColumnDefinitions>
 
-            <!-- DRAG region: Name 56 | Bar 64 | Remaining * = 219.
-                 Narrow name column so short labels leave only a small gap before the
-                 fixed left-aligned bar; remaining is left-aligned after the bar. -->
+            <!-- DRAG region: Name 56 | Bar 64 | Remaining 64 = 196. -->
             <Grid x:Name="DragRegion"
                   Grid.Column="0"
                   Background="Transparent"
@@ -41,7 +35,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="56" />
                     <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="64" />
                 </Grid.ColumnDefinitions>
 
                 <!-- Provider name + the persistent qualifier badge (F1/UI-SPEC).

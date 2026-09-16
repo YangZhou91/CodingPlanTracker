@@ -5,22 +5,20 @@ using Xunit;
 namespace PlanMeter.Core.Tests;
 
 /// <summary>
-/// LAY-01..04 / THM-05 / THM-06 geometry pins for the PlanMeter B chrome.
-/// Content width 302, window 320×144 at 5 Ok rows, row 26, bar 4/r3, ChipSteal invariant.
-/// Applied columns are font-measured (chip steal 8, reset steal 4) so WEEK/MONTH/now fit.
+/// Geometry pins for the compact PlanMeter B chrome (window 297×144 at 5 rows).
 /// </summary>
 public sealed class WidgetLayoutTests
 {
     [Fact]
-    public void ContentWidth_is_302()
+    public void ContentWidth_is_279()
     {
-        WidgetLayout.ContentWidth.Should().Be(302);
+        WidgetLayout.ContentWidth.Should().Be(279);
     }
 
     [Fact]
-    public void WindowWidth_is_320()
+    public void WindowWidth_is_297()
     {
-        WidgetLayout.WindowWidth.Should().Be(320);
+        WidgetLayout.WindowWidth.Should().Be(297);
     }
 
     [Fact]
@@ -38,37 +36,34 @@ public sealed class WidgetLayoutTests
     }
 
     [Fact]
-    public void DragRegionWidth_is_219()
+    public void DragRegionWidth_is_196()
     {
-        WidgetLayout.DragRegionWidth.Should().Be(219);
+        WidgetLayout.DragRegionWidth.Should().Be(196);
     }
 
     [Fact]
-    public void Columns_plus_gaps_plus_padding_plus_border_equals_320()
+    public void Columns_plus_gaps_plus_padding_plus_border_equals_297()
     {
         double cols = WidgetLayout.NameW + WidgetLayout.BarW + WidgetLayout.NumberW
                       + WidgetLayout.ChipW + WidgetLayout.ResetW;
         double gaps = 4 * WidgetLayout.ColGap;
         double chrome = 2 * WidgetLayout.PadH + 2 * WidgetLayout.Border;
-        (cols + gaps + chrome).Should().Be(320);
+        (cols + gaps + chrome).Should().Be(297);
     }
 
     [Fact]
     public void Applied_chip_width_fits_WEEK_and_MONTH_labels()
     {
-        // Design chip 37 clipped WEEK at 11 Regular; applied 45 is the font-measure fix.
         WidgetLayout.ChipW.Should().BeGreaterThanOrEqualTo(45);
         WidgetLayout.BarW.Should().Be(64);
         (WidgetLayout.BarW + WidgetLayout.ChipW).Should().Be(109);
     }
 
     [Fact]
-    public void Applied_number_width_fits_remaining_100_label()
+    public void Applied_remaining_width_fits_remaining_100_label()
     {
-        // Remaining lives in the star region after the bar (87 at Name 56).
-        WidgetLayout.NumberW.Should().Be(87);
+        WidgetLayout.NumberW.Should().Be(64);
         WidgetLayout.NameW.Should().Be(56);
-        (WidgetLayout.NumberW + WidgetLayout.ResetW).Should().Be(113);
     }
 
     [Fact]
@@ -91,7 +86,7 @@ public sealed class WidgetLayoutTests
             var (bar, chip) = WidgetLayout.ChipSteal(steal);
             bar.Should().Be(64 - steal);
             chip.Should().Be(45 + steal);
-            (bar + chip).Should().Be(109, "THM-06 keeps bar+chip at the fixed 109 DIP total");
+            (bar + chip).Should().Be(109);
         }
     }
 

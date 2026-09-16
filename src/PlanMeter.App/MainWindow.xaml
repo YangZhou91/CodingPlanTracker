@@ -13,9 +13,9 @@
         ShowInTaskbar="True"
         SizeToContent="WidthAndHeight"
         Background="{DynamicResource Brush.Surface}"
-        MinWidth="320"
+        MinWidth="297"
         SizeChanged="Window_SizeChanged">
-    <!-- MinWidth 320 = WidgetLayout.WindowWidth (content 302 + pad 16 + border 2). -->
+    <!-- MinWidth 297 = WidgetLayout.WindowWidth (content 279 + pad 16 + border 2). -->
 
     <!-- D-24 widget-global ContextMenu (right-click on the drag region of ANY row):
          Refresh now / [conditional: Open {Provider} console] / separator / About
