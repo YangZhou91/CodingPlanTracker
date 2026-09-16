@@ -30,11 +30,9 @@
                 <ColumnDefinition Width="26" />
             </Grid.ColumnDefinitions>
 
-            <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
-                 here (WIDGET-02/drag; UI-SPEC §Drag region). Nested fixed columns:
-                 Name 79 | Bar 64 | spacer * | Number 64 = 219.
-                 Name text left-aligned. Bar is always 64 DIP, left-aligned in its
-                 cell so every row's meter shares the same left edge. -->
+            <!-- DRAG region: Name 79 | Bar 64 | Remaining * (left) = 219.
+                 Name text left; bar fixed 64 left-aligned; remaining label left-aligned
+                 immediately after the bar (no right-edge parking). -->
             <Grid x:Name="DragRegion"
                   Grid.Column="0"
                   Background="Transparent"
@@ -44,7 +42,6 @@
                     <ColumnDefinition Width="79" />
                     <ColumnDefinition Width="64" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="64" />
                 </Grid.ColumnDefinitions>
 
                 <!-- Provider name + the persistent qualifier badge (F1/UI-SPEC).
@@ -113,14 +110,12 @@
                     </Grid>
                 </Grid>
 
-                <!-- Number column (applied 66 DIP, WidgetLayout.NumberW). DAT-01 remaining
-                     label: two TextBlocks (prefix 11 muted + value 13 Medium tabular).
-                     66 DIP so 剩余 100% is not clipped after the 6 DIP gap margin. -->
+                <!-- Remaining label — left-aligned right after the quota bar. -->
                 <StackPanel x:Name="RemainingHost"
-                            Grid.Column="3"
+                            Grid.Column="2"
                             Margin="6,0,0,0"
                             Orientation="Horizontal"
-                            HorizontalAlignment="Right"
+                            HorizontalAlignment="Left"
                             VerticalAlignment="Center"
                             Visibility="Collapsed">
                     <TextBlock x:Name="RemainingPrefix"
@@ -140,19 +135,17 @@
                                VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- StatusText — Phase 14 ROW-04..09 body line. Spans bar+spacer+number
-                     (DragRegion cols 1-3), right-aligned, muted, drag-capable.
-                     Visible only on non-figure states; collapsed on Ok/NearLimit/Stale
-                     with a figure. -->
+                <!-- StatusText — Phase 14 ROW-04..09 body line. Spans bar+remaining
+                     (DragRegion cols 1-2), left-aligned after the name, muted. -->
                 <TextBlock x:Name="StatusText"
                            Grid.Column="1"
-                           Grid.ColumnSpan="3"
+                           Grid.ColumnSpan="2"
                            Margin="6,0,0,0"
                            Text=""
                            Style="{StaticResource TextMutedStyle}"
                            Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
                            VerticalAlignment="Center"
-                           HorizontalAlignment="Right"
+                           HorizontalAlignment="Left"
                            TextWrapping="NoWrap"
                            TextTrimming="CharacterEllipsis"
                            Cursor="Arrow"
