@@ -31,18 +31,17 @@
             </Grid.ColumnDefinitions>
 
             <!-- DRAG region: provider-name + bar + number. DragMove fires ONLY from
-                 here (WIDGET-02/drag; UI-SPEC §Drag region). Nested columns:
-                 Name Auto (max 79) | Bar 64 fixed | spacer * | Number 64 = 219.
-                 Name is left-aligned; the bar is always WidgetLayout.BarW long and
-                 sits 6 DIP after the name — leftover width goes between bar and
-                 number, not as a hole after short names. -->
+                 here (WIDGET-02/drag; UI-SPEC §Drag region). Nested fixed columns:
+                 Name 79 | Bar 64 | spacer * | Number 64 = 219.
+                 Name text left-aligned. Bar is always 64 DIP, left-aligned in its
+                 cell so every row's meter shares the same left edge. -->
             <Grid x:Name="DragRegion"
                   Grid.Column="0"
                   Background="Transparent"
                   Cursor="SizeAll"
                   MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" MaxWidth="79" />
+                    <ColumnDefinition Width="79" />
                     <ColumnDefinition Width="64" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="64" />
@@ -54,7 +53,6 @@
                 <StackPanel Grid.Column="0"
                             Orientation="Horizontal"
                             HorizontalAlignment="Left"
-                            MaxWidth="79"
                             VerticalAlignment="Center">
                     <TextBlock x:Name="ProviderText"
                                Text="Z.ai"
@@ -87,16 +85,17 @@
                 <Grid Grid.Column="1"
                       Margin="6,0,0,0"
                       VerticalAlignment="Center"
-                      HorizontalAlignment="Stretch">
+                      HorizontalAlignment="Left">
                     <!-- UIR-01 remaining-quota meter. Height 4 / CornerRadius 3
-                         (WidgetLayout.BarHeight / BarRadius). Track is Brush.QuotaTrack;
-                         fill is Accent/NearLimit/Dimmed from code. -->
+                         (WidgetLayout.BarHeight / BarRadius). Fixed 64 DIP track,
+                         left-aligned so meters line up across rows. -->
                     <Grid x:Name="QuotaBar"
+                          Width="64"
                           Height="4"
                           Visibility="Collapsed"
                           Cursor="Arrow"
                           VerticalAlignment="Center"
-                          HorizontalAlignment="Stretch">
+                          HorizontalAlignment="Left">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition x:Name="QuotaFillCol" Width="0*" />
                             <ColumnDefinition x:Name="QuotaEmptyCol" Width="100*" />
