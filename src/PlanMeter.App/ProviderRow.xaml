@@ -30,16 +30,16 @@
                 <ColumnDefinition Width="26" />
             </Grid.ColumnDefinitions>
 
-            <!-- DRAG region: Name 79 | Bar 64 | Remaining * (left) = 219.
-                 Name text left; bar fixed 64 left-aligned; remaining label left-aligned
-                 immediately after the bar (no right-edge parking). -->
+            <!-- DRAG region: Name 56 | Bar 64 | Remaining * = 219.
+                 Narrow name column so short labels leave only a small gap before the
+                 fixed left-aligned bar; remaining is left-aligned after the bar. -->
             <Grid x:Name="DragRegion"
                   Grid.Column="0"
                   Background="Transparent"
                   Cursor="SizeAll"
                   MouseLeftButtonDown="DragRegion_MouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="79" />
+                    <ColumnDefinition Width="56" />
                     <ColumnDefinition Width="64" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
