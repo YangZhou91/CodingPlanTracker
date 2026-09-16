@@ -4,6 +4,7 @@ using System.Reflection;
 using FluentAssertions;
 using PlanMeter.Core.Adapters;
 using PlanMeter.Core.Models;
+using PlanMeter.Core.Presentation;
 using Xunit;
 
 namespace PlanMeter.Core.Tests;
@@ -314,6 +315,14 @@ public sealed class ZaiNormalizerTests
         reading.AllWindows!.Count.Should().Be(2,
             "the 5h + weekly TOKENS_LIMIT entries are kept; the TIME_LIMIT entry is skipped by the type filter");
         reading.ErrorMessage.Should().BeNull();
+
+        // nextResetTime (Unix ms) must populate ResetsAtUtc — DTO previously only
+        // bound resetTime, so the widget collapsed Z.ai's reset slot.
+        reading.AllWindows.Should().Contain(w =>
+            w.Kind == WindowKind.Weekly &&
+            w.ResetsAtUtc == DateTimeOffset.FromUnixTimeMilliseconds(1787018423978));
+        QuotaRowFormatter.LookupMostBindingReset(reading).Should().NotBeNull(
+            "most-binding weekly window carries nextResetTime from the real-shape payload");
     }
 
     [Fact]

@@ -96,12 +96,43 @@ public sealed class ZaiLimitEntry
     public DateTimeOffset? ResetTime { get; set; }
 
     /// <summary>
+    /// Live real-shape field (fixture zai-quota-limit-real-shape.json): Unix milliseconds.
+    /// Preferred when <see cref="ResetTime"/> is absent — the documented DTO key never
+    /// appeared on the dogfood curl, which is why the widget hid Z.ai's reset slot.
+    /// </summary>
+    [JsonPropertyName("nextResetTime")]
+    public long? NextResetTimeUnixMs { get; set; }
+
+    /// <summary>
     /// Defensive fallback: any future field Z.ai adds is captured here rather than
     /// throwing. The normalizer inspects this dictionary for additional candidate
     /// consumed/limit fields if the typed fields above are all absent.
     /// </summary>
     [JsonExtensionData]
     public IDictionary<string, JsonElement>? ExtensionData { get; set; }
+
+    /// <summary>Reset timestamp from either DTO field; null when neither is present.</summary>
+    public DateTimeOffset? ResolveResetTime()
+    {
+        if (ResetTime is DateTimeOffset explicitReset)
+        {
+            return explicitReset;
+        }
+
+        if (NextResetTimeUnixMs is long ms && ms > 0)
+        {
+            try
+            {
+                return DateTimeOffset.FromUnixTimeMilliseconds(ms);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return null;
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Resolve the consumed-tokens value, whichever of the candidate fields the
@@ -210,7 +241,7 @@ public static class ZaiNormalizer
                     : Math.Clamp(used!.Value / limit!.Value * 100.0, 0.0, 100.0);
                 double remainingPct = 100.0 - usedPct;
 
-                windows.Add(new WindowReading(kind, usedPct, remainingPct, entry.ResetTime));
+                windows.Add(new WindowReading(kind, usedPct, remainingPct, entry.ResolveResetTime()));
             }
         }
 
