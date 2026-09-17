@@ -121,6 +121,49 @@
                 </Border>
 
                 <Rectangle Height="{StaticResource Space.3Xl}" />
+                <TextBlock Text="Proxy"
+                           Style="{StaticResource TextBodyStyle}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource Brush.OnSurface}"
+                           Margin="0,0,0,8" />
+                <Border Background="{DynamicResource Brush.Surface.Elevated}"
+                        BorderBrush="{DynamicResource Brush.Divider}"
+                        BorderThickness="1"
+                        CornerRadius="2"
+                        Padding="12,8,12,8"
+                        Margin="0,0,0,8">
+                    <StackPanel Orientation="Vertical">
+                        <CheckBox x:Name="ProxyToggle"
+                                  Content="Use HTTP proxy"
+                                  Foreground="{DynamicResource Brush.OnSurface}"
+                                  AutomationProperties.Name="Use HTTP proxy" />
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Address"
+                                       Style="{StaticResource TextBodyStyle}"
+                                       Foreground="{DynamicResource Brush.OnSurface}"
+                                       VerticalAlignment="Center" />
+                            <TextBox x:Name="ProxyAddressBox"
+                                     Grid.Column="1"
+                                     Width="148"
+                                     VerticalAlignment="Center"
+                                     Background="{DynamicResource Brush.Surface.Elevated}"
+                                     Foreground="{DynamicResource Brush.OnSurface}"
+                                     BorderBrush="{DynamicResource Brush.Divider}"
+                                     AutomationProperties.Name="Proxy address" />
+                        </Grid>
+                        <TextBlock Text="Default is 127.0.0.1:7897 (Clash). Applies to Codex, Grok, and OpenCode. Z.ai and MiniMax stay direct."
+                                   Style="{StaticResource TextBodyStyle}"
+                                   Foreground="{DynamicResource Brush.OnSurface.Dimmed}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Rectangle Height="{StaticResource Space.3Xl}" />
                 <TextBlock Text="Startup"
                            Style="{StaticResource TextBodyStyle}"
                            FontWeight="SemiBold"

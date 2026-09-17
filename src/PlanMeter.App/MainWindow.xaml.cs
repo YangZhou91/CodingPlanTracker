@@ -11,6 +11,7 @@ using PlanMeter.Core.Auth;
 using PlanMeter.Core.Boot;
 using PlanMeter.Core.Config;
 using PlanMeter.Core.Credentials;
+using PlanMeter.Core.Http;
 using PlanMeter.Core.Models;
 using PlanMeter.Core.Polling;
 using PlanMeter.Core.Refresh;
@@ -61,6 +62,9 @@ public partial class MainWindow : Window
     /// (T-15-01). Handed to the settings window's Appearance card.</summary>
     private readonly ThemeSource _themeSource;
 
+    /// <summary>Live explicit HTTP proxy. Handed to the settings window's Proxy card.</summary>
+    private readonly ProxySource _proxySource;
+
     /// <summary>GROK-03 — forwarded to the settings Grok login card.</summary>
     private readonly GrokOAuthFlow _grokOAuthFlow;
 
@@ -89,6 +93,7 @@ public partial class MainWindow : Window
         ConfigStore configStore,
         PollIntervalSource intervalSource,
         ThemeSource themeSource,
+        ProxySource proxySource,
         GrokOAuthFlow grokOAuthFlow,
         GrokTokenManager grokTokenManager,
         BootShortcutManager bootShortcuts)
@@ -104,6 +109,7 @@ public partial class MainWindow : Window
         _configStore = configStore ?? throw new ArgumentNullException(nameof(configStore));
         _intervalSource = intervalSource ?? throw new ArgumentNullException(nameof(intervalSource));
         _themeSource = themeSource ?? throw new ArgumentNullException(nameof(themeSource));
+        _proxySource = proxySource ?? throw new ArgumentNullException(nameof(proxySource));
 
         InitializeComponent();
 
@@ -494,7 +500,7 @@ public partial class MainWindow : Window
     {
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow(_registry, _keyStoreFactory, _pollers, _store, _configStore, _intervalSource, _themeSource, _grokOAuthFlow, _grokTokenManager, _bootShortcuts)
+            _settingsWindow = new SettingsWindow(_registry, _keyStoreFactory, _pollers, _store, _configStore, _intervalSource, _themeSource, _proxySource, _grokOAuthFlow, _grokTokenManager, _bootShortcuts)
             {
                 // Owned windows render above their owner (the strip); NOT a second topmost
                 // HWND. Closing the widget (Quit) closes the owned window.

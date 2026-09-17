@@ -16,6 +16,7 @@ using PlanMeter.Core.Auth;
 using PlanMeter.Core.Boot;
 using PlanMeter.Core.Config;
 using PlanMeter.Core.Credentials;
+using PlanMeter.Core.Http;
 using PlanMeter.Core.Models;
 using PlanMeter.Core.Polling;
 using PlanMeter.Core.Store;
@@ -73,6 +74,13 @@ public partial class SettingsWindow : Window
     /// toggle/interval write never clobbers the user's theme (T-15-02).</summary>
     private readonly ThemeSource _themeSource;
 
+    /// <summary>
+    /// Live explicit HTTP proxy (Clash mixed-port by default). The Proxy card
+    /// persist-then-applies Enabled + Address; every ConfigData write carries both
+    /// so an interval/theme/toggle write never drops the hop.
+    /// </summary>
+    private readonly ProxySource _proxySource;
+
     /// <summary>GROK-03 — Core device-flow service the Grok login card drives.</summary>
     private readonly GrokOAuthFlow _grokOAuthFlow;
 
@@ -99,6 +107,7 @@ public partial class SettingsWindow : Window
         ConfigStore configStore,
         PollIntervalSource intervalSource,
         ThemeSource themeSource,
+        ProxySource proxySource,
         GrokOAuthFlow grokOAuthFlow,
         GrokTokenManager grokTokenManager,
         BootShortcutManager bootShortcuts)
@@ -110,6 +119,7 @@ public partial class SettingsWindow : Window
         _configStore = configStore ?? throw new ArgumentNullException(nameof(configStore));
         _intervalSource = intervalSource ?? throw new ArgumentNullException(nameof(intervalSource));
         _themeSource = themeSource ?? throw new ArgumentNullException(nameof(themeSource));
+        _proxySource = proxySource ?? throw new ArgumentNullException(nameof(proxySource));
         _grokOAuthFlow = grokOAuthFlow ?? throw new ArgumentNullException(nameof(grokOAuthFlow));
         _grokTokenManager = grokTokenManager ?? throw new ArgumentNullException(nameof(grokTokenManager));
         _bootShortcuts = bootShortcuts ?? throw new ArgumentNullException(nameof(bootShortcuts));
@@ -134,6 +144,15 @@ public partial class SettingsWindow : Window
         // THM-03 — the Appearance card: build Light/Dark items and pre-select the live
         // theme. Handler subscribed AFTER pre-select (same discipline as BuildIntervalCombo).
         BuildThemeCombo();
+
+        // Proxy card — set from the live source FIRST, then subscribe. Click (not
+        // Checked/Unchecked) so a programmatic IsChecked revert cannot re-enter.
+        ProxyToggle.IsChecked = _proxySource.Enabled;
+        ProxyAddressBox.Text = _proxySource.Address;
+        ProxyAddressBox.IsEnabled = _proxySource.Enabled;
+        ProxyToggle.Click += ProxyToggle_Click;
+        ProxyAddressBox.LostFocus += ProxyAddressBox_LostFocus;
+        ProxyAddressBox.KeyDown += ProxyAddressBox_KeyDown;
 
         // BOOT-01 — derive the checkbox from File.Exists FIRST, then subscribe Click.
         // A programmatic set must not fire the handler (same discipline as BuildIntervalCombo).
@@ -199,11 +218,11 @@ public partial class SettingsWindow : Window
         try
         {
             // Persist FIRST (atomic ConfigStore.Write), carrying the CURRENT enabled-set
-            // and the LIVE theme so the interval write never clobbers (or is clobbered by)
-            // the enabled state or the user's theme choice (T-15-02).
+            // and the LIVE theme + proxy so the interval write never clobbers (or is clobbered by)
+            // the enabled state, the user's theme choice (T-15-02), or the proxy hop.
             _configStore.Write(
                 _configStore.DefaultConfigPath,
-                new ConfigData(seconds, _registry.Enabled.Select(p => p.Id).ToArray(), _themeSource.Current));
+                SnapshotConfig(pollIntervalSeconds: seconds));
         }
         catch (Exception)
         {
@@ -280,13 +299,10 @@ public partial class SettingsWindow : Window
 
         try
         {
-            // Persist FIRST — live interval + live enabled + selected theme (T-15-02/03).
+            // Persist FIRST — live interval + live enabled + selected theme + live proxy (T-15-02/03).
             _configStore.Write(
                 _configStore.DefaultConfigPath,
-                new ConfigData(
-                    (int)_intervalSource.Current.TotalSeconds,
-                    _registry.Enabled.Select(p => p.Id).ToArray(),
-                    tag));
+                SnapshotConfig(theme: tag));
         }
         catch (Exception)
         {
@@ -391,7 +407,7 @@ public partial class SettingsWindow : Window
         {
             _configStore.Write(
                 _configStore.DefaultConfigPath,
-                new ConfigData((int)_intervalSource.Current.TotalSeconds, prospective, _themeSource.Current));
+                SnapshotConfig(enabledProviders: prospective));
         }
         catch (Exception)
         {
@@ -411,6 +427,138 @@ public partial class SettingsWindow : Window
         {
             poller.SetEnabled(isChecked);
         }
+    }
+
+    /// <summary>
+    /// Single ConfigData constructor for interval, theme, provider-toggle, and proxy
+    /// handlers. Live values fill every field the caller does not override, so a proxy
+    /// write cannot clobber theme and a theme write cannot drop proxy.
+    /// </summary>
+    private ConfigData SnapshotConfig(
+        int? pollIntervalSeconds = null,
+        IReadOnlyList<ProviderId>? enabledProviders = null,
+        string? theme = null,
+        bool? useProxy = null,
+        string? proxyAddress = null)
+        => new(
+            pollIntervalSeconds ?? (int)_intervalSource.Current.TotalSeconds,
+            enabledProviders ?? _registry.Enabled.Select(p => p.Id).ToArray(),
+            theme ?? _themeSource.Current,
+            useProxy ?? _proxySource.Enabled,
+            proxyAddress ?? _proxySource.Address);
+
+    /// <summary>
+    /// Persist-then-apply the Use HTTP proxy checkbox. Invalid address (when enabling)
+    /// reverts UI and does not Write or Set. Write failure reverts UI and does not Set.
+    /// When turning off, the last valid address stays in the (disabled) box and is
+    /// persisted alongside useProxy false.
+    /// </summary>
+    private void ProxyToggle_Click(object sender, RoutedEventArgs e)
+    {
+        bool wanted = ProxyToggle.IsChecked == true;
+        string typed = ProxyAddressBox.Text ?? string.Empty;
+
+        string persistAddress;
+        if (wanted)
+        {
+            if (!ProxySource.TryParse(typed, out string display, out _))
+            {
+                RevertProxyUiToLive();
+                WindowErrorLine.Visibility = Visibility.Visible;
+                return;
+            }
+
+            persistAddress = display;
+        }
+        else
+        {
+            persistAddress = ProxySource.TryParse(typed, out string display, out _)
+                ? display
+                : _proxySource.Address;
+            ProxyAddressBox.Text = persistAddress;
+        }
+
+        try
+        {
+            _configStore.Write(
+                _configStore.DefaultConfigPath,
+                SnapshotConfig(useProxy: wanted, proxyAddress: persistAddress));
+        }
+        catch (Exception)
+        {
+            RevertProxyUiToLive();
+            WindowErrorLine.Visibility = Visibility.Visible;
+            return;
+        }
+
+        WindowErrorLine.Visibility = Visibility.Collapsed;
+        _proxySource.Set(wanted, persistAddress);
+        ProxyAddressBox.Text = persistAddress;
+        ProxyAddressBox.IsEnabled = wanted;
+    }
+
+    /// <summary>Persist the address box on LostFocus. No-ops when the text matches live (covers revert-then-LostFocus).</summary>
+    private void ProxyAddressBox_LostFocus(object sender, RoutedEventArgs e) => PersistProxyAddressFromBox();
+
+    /// <summary>Persist the address box on Enter.</summary>
+    private void ProxyAddressBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            PersistProxyAddressFromBox();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// Persist-then-apply a typed host:port. Empty/invalid when enabled does not Write
+    /// and does not Set. When the checkbox is off the box is disabled — no-op.
+    /// </summary>
+    private void PersistProxyAddressFromBox()
+    {
+        bool enabled = ProxyToggle.IsChecked == true;
+        if (!enabled)
+        {
+            return;
+        }
+
+        string typed = (ProxyAddressBox.Text ?? string.Empty).Trim();
+        if (string.Equals(typed, _proxySource.Address, StringComparison.Ordinal)
+            && enabled == _proxySource.Enabled)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(typed) || !ProxySource.TryParse(typed, out string display, out _))
+        {
+            ProxyAddressBox.Text = _proxySource.Address;
+            WindowErrorLine.Visibility = Visibility.Visible;
+            return;
+        }
+
+        try
+        {
+            _configStore.Write(
+                _configStore.DefaultConfigPath,
+                SnapshotConfig(useProxy: true, proxyAddress: display));
+        }
+        catch (Exception)
+        {
+            ProxyAddressBox.Text = _proxySource.Address;
+            WindowErrorLine.Visibility = Visibility.Visible;
+            return;
+        }
+
+        WindowErrorLine.Visibility = Visibility.Collapsed;
+        _proxySource.Set(true, display);
+        ProxyAddressBox.Text = display;
+    }
+
+    private void RevertProxyUiToLive()
+    {
+        ProxyToggle.IsChecked = _proxySource.Enabled;
+        ProxyAddressBox.Text = _proxySource.Address;
+        ProxyAddressBox.IsEnabled = _proxySource.Enabled;
     }
 
     /// <summary>

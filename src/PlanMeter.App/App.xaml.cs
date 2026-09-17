@@ -437,6 +437,7 @@ public partial class App : Application
         var grokTokenManager = _host.Services.GetRequiredService<GrokTokenManager>();
         var bootShortcuts = _host.Services.GetRequiredService<BootShortcutManager>();
         var themeSource = _host.Services.GetRequiredService<ThemeSource>();
+        var proxySource = _host.Services.GetRequiredService<ProxySource>();
 
         // THM-03 / T-15-04 — apply the stored theme BEFORE MainWindow.Show so there is
         // no light flash when dark is stored. Seed never fires ThemeChanged (window not
@@ -446,7 +447,7 @@ public partial class App : Application
         ThemeApplier.Apply(themeSource.IsDark);
 
         // Show the focus-safe topmost shell. MainWindow takes the generalized services.
-        var window = new MainWindow(registry, pollers, store, keyStoreFactory, refreshGate, configStore, intervalSource, themeSource, grokOAuthFlow, grokTokenManager, bootShortcuts);
+        var window = new MainWindow(registry, pollers, store, keyStoreFactory, refreshGate, configStore, intervalSource, themeSource, proxySource, grokOAuthFlow, grokTokenManager, bootShortcuts);
         MainWindow = window;
         window.Show();
 
