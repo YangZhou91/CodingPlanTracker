@@ -306,6 +306,11 @@ public static class HttpExtensions
             {
                 AllowAutoRedirect = false,
                 UseCookies = false,
+                // Direct allow-listed egress only. Default UseProxy=true sends traffic
+                // through the OS proxy (Clash 7897 here); that path was timing out for
+                // api.z.ai while direct IPv4 returned 200. PlanMeter never needs a
+                // system proxy — SEC-02 pins hosts at the handler.
+                UseProxy = false,
                 MaxResponseHeadersLength = MaxResponseHeadersLength,
                 // Broken/AAAA-present IPv6 (api.z.ai resolves to aliyun IPv6 that does not
                 // complete TCP here) made HttpClient hang until the 15s timeout while
