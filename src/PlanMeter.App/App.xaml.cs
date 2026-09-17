@@ -417,6 +417,13 @@ public partial class App : Application
         // real "zai" HttpClient on its first fetch.
         _deferredHttpClientFactory!.Bind(_host.Services.GetRequiredService<System.Net.Http.IHttpClientFactory>());
 
+        // Seed the live HTTP proxy BEFORE StartAsync so the first poll CONNECT uses
+        // config.json (enabled + 127.0.0.1:7897 when either field is missing), not
+        // only the constructor default. The same startupConfig later seeds ThemeSource.
+        var configStoreForProxy = _host.Services.GetRequiredService<ConfigStore>();
+        ConfigData? startupConfig = configStoreForProxy.TryRead(configStoreForProxy.DefaultConfigPath);
+        _host.Services.GetRequiredService<ProxySource>().Seed(startupConfig?.UseProxy, startupConfig?.ProxyAddress);
+
         await _host.StartAsync();
 
         var registry = _host.Services.GetRequiredService<ProviderRegistry>();
@@ -433,8 +440,8 @@ public partial class App : Application
 
         // THM-03 / T-15-04 — apply the stored theme BEFORE MainWindow.Show so there is
         // no light flash when dark is stored. Seed never fires ThemeChanged (window not
-        // built yet); ThemeApplier.Apply is the explicit paint.
-        ConfigData? startupConfig = configStore.TryRead(configStore.DefaultConfigPath);
+        // built yet); ThemeApplier.Apply is the explicit paint. Reuse the pre-Start
+        // startupConfig so Theme and Proxy see the same disk snapshot.
         themeSource.Seed(startupConfig?.Theme);
         ThemeApplier.Apply(themeSource.IsDark);
 

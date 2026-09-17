@@ -238,8 +238,10 @@ public static class HttpExtensions
     /// <inheritdoc cref="AddPlanMeterProviderClient(IServiceCollection, string, string, TimeSpan, string[])"/>
     /// <param name="useProxy">
     /// <see langword="false"/> for CN-reachable hosts (Z.ai, MiniMax) so Clash cannot
-    /// hang them. <see langword="true"/> for chatgpt.com / grok.com / auth.x.ai /
-    /// opencode.ai so the WinINET system proxy is used — those hosts TCP-timeout on
+    /// hang them (direct IPv4, <c>Proxy</c> left null). <see langword="true"/> for
+    /// chatgpt.com / grok.com / auth.x.ai / opencode.ai so traffic hops through the
+    /// live <see cref="ProxySource"/> singleton (explicit host:port, default
+    /// 127.0.0.1:7897 — not the WinINET system proxy). Those hosts TCP-timeout on
     /// direct IPv4 from this network.
     /// </param>
     public static IServiceCollection AddPlanMeterProviderClient(
@@ -294,6 +296,14 @@ public static class HttpExtensions
             });
         }
 
+        // Live explicit HTTP proxy (Clash mixed-port by default). TryAdd-style so a
+        // second helper call never registers a second ProxySource — handlers and
+        // Settings must mutate the SAME instance.
+        if (!services.Any(d => d.ServiceType == typeof(ProxySource)))
+        {
+            services.AddSingleton<ProxySource>();
+        }
+
         // Register handlers as transient — DelegatingHandlers are not reused across
         // requests by IHttpClientFactory's pooling; each request gets a fresh chain.
         services.AddTransient<AllowListHandler>();
@@ -317,15 +327,16 @@ public static class HttpExtensions
         // prevents any cross-call cookie accumulation from being silently forwarded by a
         // future redirect. MaxResponseHeadersLength bounds the header read (defence in
         // depth against header-bomb).
-        .ConfigurePrimaryHttpMessageHandler(() =>
-            new SocketsHttpHandler
+        .ConfigurePrimaryHttpMessageHandler(sp =>
+        {
+            var handler = new SocketsHttpHandler
             {
                 AllowAutoRedirect = false,
                 UseCookies = false,
                 // Per-client. Z.ai/MiniMax: false (direct IPv4; Clash hung api.z.ai).
-                // Codex/Grok/OpenCode: true (WinINET proxy; those hosts TCP-timeout
-                // on direct IPv4). ConnectCallback still IPv4-connects — to origin
-                // when direct, to the proxy endpoint when UseProxy is true.
+                // Codex/Grok/OpenCode: true (explicit ProxySource hop; those hosts
+                // TCP-timeout on direct IPv4). ConnectCallback still IPv4-connects —
+                // to origin when direct, to the proxy endpoint when UseProxy is true.
                 UseProxy = useProxy,
                 MaxResponseHeadersLength = MaxResponseHeadersLength,
                 // Broken/AAAA-present IPv6 (api.z.ai resolves to aliyun IPv6 that does not
@@ -366,7 +377,18 @@ public static class HttpExtensions
                         throw;
                     }
                 },
-            })
+            };
+
+            // Pin the DI singleton — a one-shot WebProxy at handler-create time would
+            // ignore Settings. Do not add the proxy host to ProviderAllowedHosts;
+            // AllowListHandler still validates the origin.
+            if (useProxy)
+            {
+                handler.Proxy = sp.GetRequiredService<ProxySource>();
+            }
+
+            return handler;
+        })
         // OUTERMOST — refuse non-allow-listed hosts before SendAsync. The refusal
         // happens before RedactingHandler or the network sees the request (SEC-02/ordering).
         .AddHttpMessageHandler<AllowListHandler>()

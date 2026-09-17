@@ -9,11 +9,14 @@ namespace PlanMeter.Core.Config;
 
 /// <summary>
 /// D-15 — the on-disk config shape the settings window reads AND writes:
-/// <c>{ "pollIntervalSeconds": 600, "enabledProviders": ["zai"], "theme": "dark" }</c>.
+/// <c>{ "pollIntervalSeconds": 600, "enabledProviders": ["zai"], "theme": "dark",
+/// "useProxy": true, "proxyAddress": "127.0.0.1:7897" }</c>.
 /// A NULL <see cref="EnabledProviders"/> means "not configured / all enabled" (the old
 /// <c>{ "pollIntervalSeconds": N }</c> shape the read tolerates); an EMPTY list means
 /// "all disabled" (an explicit user choice). A NULL/missing <see cref="Theme"/> means
-/// light (THM-03 — zero migration for existing files). The credential NEVER appears in
+/// light (THM-03 — zero migration for existing files). A NULL/missing
+/// <see cref="UseProxy"/> or <see cref="ProxyAddress"/> degrades at Seed time to
+/// enabled + 127.0.0.1:7897 (zero migration). The credential NEVER appears in
 /// this record or the serialized file (SEC-04) — keys live only in per-provider DPAPI blobs.
 /// </summary>
 /// <param name="PollIntervalSeconds">The polling interval in seconds (clamped by
@@ -23,10 +26,16 @@ namespace PlanMeter.Core.Config;
 /// <param name="Theme">The user-selected theme token (<c>"light"</c> | <c>"dark"</c>),
 /// or null when not configured (caller treats as light). Optional third param — existing
 /// 2-arg call sites still compile (THM-03, Phase 15).</param>
+/// <param name="UseProxy">Whether Codex/Grok/OpenCode hop through the explicit HTTP
+/// proxy. Null/missing degrades to enabled at <c>ProxySource.Seed</c>.</param>
+/// <param name="ProxyAddress">Display <c>host:port</c> for the explicit HTTP proxy.
+/// Null/missing/invalid degrades to <c>127.0.0.1:7897</c> at Seed. Not a credential.</param>
 public sealed record ConfigData(
     [property: JsonPropertyName("pollIntervalSeconds")] int PollIntervalSeconds,
     [property: JsonPropertyName("enabledProviders")] IReadOnlyList<ProviderId>? EnabledProviders,
-    [property: JsonPropertyName("theme")] string? Theme = null);
+    [property: JsonPropertyName("theme")] string? Theme = null,
+    [property: JsonPropertyName("useProxy")] bool? UseProxy = null,
+    [property: JsonPropertyName("proxyAddress")] string? ProxyAddress = null);
 
 /// <summary>
 /// D-15 — the read/write companion to the Phase-2 read-only
