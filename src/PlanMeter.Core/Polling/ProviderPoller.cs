@@ -666,11 +666,11 @@ public sealed class ProviderPoller : BackgroundService
 
             // G-04-4 liveness — the fetch outcome line: status is the ReadingStatus enum
             // NAME only (Ok/NearLimit/Error/NotLoggedIn/Unsupported). SEC-03: no URL, no
-            // header, no body, no exception text (the Error path's redacted message lives
-            // in the store reading, not here).
+            // header, no body, no raw exception text. ErrorMessage is the adapter's
+            // already-redacted user-facing string (safe to log for support).
             _logger?.LogInformation(
-                "poller fetch done (provider={ProviderId}, status={Status})",
-                _adapter.Id, result.Reading.Status);
+                "poller fetch done (provider={ProviderId}, status={Status}, error={Error})",
+                _adapter.Id, result.Reading.Status, result.Reading.ErrorMessage);
 
             if (sessionExpired)
             {
