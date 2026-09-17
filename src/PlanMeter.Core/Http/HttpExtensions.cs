@@ -131,7 +131,7 @@ public static class HttpExtensions
             throw new ArgumentNullException(nameof(services));
         }
 
-        return AddPlanMeterProviderClient(services, ZaiClientName, ZaiBaseUrl, ZaiTimeout, "api.z.ai");
+        return AddPlanMeterProviderClient(services, ZaiClientName, ZaiBaseUrl, ZaiTimeout, useProxy: false, hosts: new[] { "api.z.ai" });
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public static class HttpExtensions
             throw new ArgumentNullException(nameof(services));
         }
 
-        return AddPlanMeterProviderClient(services, MinimaxClientName, MinimaxBaseUrl, MinimaxTimeout, "api.minimaxi.com");
+        return AddPlanMeterProviderClient(services, MinimaxClientName, MinimaxBaseUrl, MinimaxTimeout, useProxy: false, hosts: new[] { "api.minimaxi.com" });
     }
 
     /// <summary>
@@ -159,7 +159,7 @@ public static class HttpExtensions
             throw new ArgumentNullException(nameof(services));
         }
 
-        return AddPlanMeterProviderClient(services, OpenCodeClientName, OpenCodeBaseUrl, OpenCodeTimeout, "opencode.ai");
+        return AddPlanMeterProviderClient(services, OpenCodeClientName, OpenCodeBaseUrl, OpenCodeTimeout, useProxy: true, "opencode.ai");
     }
 
     /// <summary>
@@ -174,7 +174,7 @@ public static class HttpExtensions
             throw new ArgumentNullException(nameof(services));
         }
 
-        return AddPlanMeterProviderClient(services, CodexClientName, CodexBaseUrl, CodexTimeout, "chatgpt.com");
+        return AddPlanMeterProviderClient(services, CodexClientName, CodexBaseUrl, CodexTimeout, useProxy: true, "chatgpt.com");
     }
 
     /// <summary>
@@ -190,7 +190,7 @@ public static class HttpExtensions
             throw new ArgumentNullException(nameof(services));
         }
 
-        return AddPlanMeterProviderClient(services, GrokAuthClientName, GrokAuthBaseUrl, GrokAuthTimeout, "auth.x.ai");
+        return AddPlanMeterProviderClient(services, GrokAuthClientName, GrokAuthBaseUrl, GrokAuthTimeout, useProxy: true, "auth.x.ai");
     }
 
     /// <summary>
@@ -206,7 +206,7 @@ public static class HttpExtensions
             throw new ArgumentNullException(nameof(services));
         }
 
-        return AddPlanMeterProviderClient(services, GrokBillingClientName, GrokBillingBaseUrl, GrokBillingTimeout, "grok.com");
+        return AddPlanMeterProviderClient(services, GrokBillingClientName, GrokBillingBaseUrl, GrokBillingTimeout, useProxy: true, "grok.com");
     }
 
     /// <summary>
@@ -232,6 +232,22 @@ public static class HttpExtensions
         string clientName,
         string baseUrl,
         TimeSpan timeout,
+        params string[] hosts)
+        => AddPlanMeterProviderClient(services, clientName, baseUrl, timeout, useProxy: true, hosts);
+
+    /// <inheritdoc cref="AddPlanMeterProviderClient(IServiceCollection, string, string, TimeSpan, string[])"/>
+    /// <param name="useProxy">
+    /// <see langword="false"/> for CN-reachable hosts (Z.ai, MiniMax) so Clash cannot
+    /// hang them. <see langword="true"/> for chatgpt.com / grok.com / auth.x.ai /
+    /// opencode.ai so the WinINET system proxy is used — those hosts TCP-timeout on
+    /// direct IPv4 from this network.
+    /// </param>
+    public static IServiceCollection AddPlanMeterProviderClient(
+        this IServiceCollection services,
+        string clientName,
+        string baseUrl,
+        TimeSpan timeout,
+        bool useProxy,
         params string[] hosts)
     {
         if (services is null)
@@ -306,11 +322,11 @@ public static class HttpExtensions
             {
                 AllowAutoRedirect = false,
                 UseCookies = false,
-                // Direct allow-listed egress only. Default UseProxy=true sends traffic
-                // through the OS proxy (Clash 7897 here); that path was timing out for
-                // api.z.ai while direct IPv4 returned 200. PlanMeter never needs a
-                // system proxy — SEC-02 pins hosts at the handler.
-                UseProxy = false,
+                // Per-client. Z.ai/MiniMax: false (direct IPv4; Clash hung api.z.ai).
+                // Codex/Grok/OpenCode: true (WinINET proxy; those hosts TCP-timeout
+                // on direct IPv4). ConnectCallback still IPv4-connects — to origin
+                // when direct, to the proxy endpoint when UseProxy is true.
+                UseProxy = useProxy,
                 MaxResponseHeadersLength = MaxResponseHeadersLength,
                 // Broken/AAAA-present IPv6 (api.z.ai resolves to aliyun IPv6 that does not
                 // complete TCP here) made HttpClient hang until the 15s timeout while
