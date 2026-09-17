@@ -307,6 +307,31 @@ public static class HttpExtensions
                 AllowAutoRedirect = false,
                 UseCookies = false,
                 MaxResponseHeadersLength = MaxResponseHeadersLength,
+                // Broken/AAAA-present IPv6 (api.z.ai resolves to aliyun IPv6 that does not
+                // complete TCP here) made HttpClient hang until the 15s timeout while
+                // curl -4 succeeded. Prefer IPv4 A records only for provider egress.
+                ConnectCallback = async (context, cancellationToken) =>
+                {
+                    var socket = new System.Net.Sockets.Socket(
+                        System.Net.Sockets.AddressFamily.InterNetwork,
+                        System.Net.Sockets.SocketType.Stream,
+                        System.Net.Sockets.ProtocolType.Tcp)
+                    {
+                        NoDelay = true,
+                    };
+
+                    try
+                    {
+                        await socket.ConnectAsync(context.DnsEndPoint, cancellationToken)
+                            .ConfigureAwait(false);
+                        return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+                    }
+                    catch
+                    {
+                        socket.Dispose();
+                        throw;
+                    }
+                },
             })
         // OUTERMOST — refuse non-allow-listed hosts before SendAsync. The refusal
         // happens before RedactingHandler or the network sees the request (SEC-02/ordering).
