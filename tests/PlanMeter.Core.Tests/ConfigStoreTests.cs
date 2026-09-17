@@ -237,6 +237,46 @@ public sealed class ConfigStoreTests
         read.Theme.Should().Be("dark");
     }
 
+    // Proxy fields — an old file with neither key reads both as null (zero migration;
+    // App ProxySource.Seed then degrades to enabled + 127.0.0.1:7897).
+    [Fact]
+    public void Missing_useProxy_and_proxyAddress_fields_read_as_null()
+    {
+        using var dir = TempDir.Create();
+        string path = Path.Combine(dir.Path, "config.json");
+        File.WriteAllText(path, "{ \"pollIntervalSeconds\": 600 }");
+        var configStore = new ConfigStore();
+
+        ConfigData? read = configStore.TryRead(path);
+        read.Should().NotBeNull();
+        read!.UseProxy.Should().BeNull();
+        read.ProxyAddress.Should().BeNull();
+    }
+
+    // Proxy fields round-trip alongside interval / enabled / theme (T-my1).
+    [Fact]
+    public void Write_then_Read_round_trips_useProxy_and_proxyAddress_alongside_theme_interval_enabled()
+    {
+        using var dir = TempDir.Create();
+        string path = Path.Combine(dir.Path, "config.json");
+        var configStore = new ConfigStore();
+
+        configStore.Write(path, new ConfigData(900, new[] { Zai, Stub }, "dark", false, "10.0.0.1:7890"));
+
+        ConfigData? read = configStore.TryRead(path);
+        read.Should().NotBeNull();
+        read!.PollIntervalSeconds.Should().Be(900);
+        read.EnabledProviders.Should().BeEquivalentTo(new[] { Zai, Stub });
+        read.Theme.Should().Be("dark");
+        read.UseProxy.Should().BeFalse();
+        read.ProxyAddress.Should().Be("10.0.0.1:7890");
+
+        string json = File.ReadAllText(path);
+        json.Should().Contain("\"useProxy\"");
+        json.Should().Contain("\"proxyAddress\"");
+        json.Should().Contain("10.0.0.1:7890");
+    }
+
     /// <summary>A disposable temp directory (never the real %LOCALAPPDATA% path).</summary>
     private sealed class TempDir : IDisposable
     {
