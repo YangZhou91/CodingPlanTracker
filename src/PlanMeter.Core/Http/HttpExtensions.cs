@@ -309,9 +309,21 @@ public static class HttpExtensions
                 MaxResponseHeadersLength = MaxResponseHeadersLength,
                 // Broken/AAAA-present IPv6 (api.z.ai resolves to aliyun IPv6 that does not
                 // complete TCP here) made HttpClient hang until the 15s timeout while
-                // curl -4 succeeded. Prefer IPv4 A records only for provider egress.
+                // curl -4 succeeded. Resolve A records only and connect IPv4.
                 ConnectCallback = async (context, cancellationToken) =>
                 {
+                    var addresses = await System.Net.Dns.GetHostAddressesAsync(
+                            context.DnsEndPoint.Host, cancellationToken)
+                        .ConfigureAwait(false);
+                    var ipv4 = System.Array.FindAll(
+                        addresses,
+                        a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+                    if (ipv4.Length == 0)
+                    {
+                        throw new System.Net.Sockets.SocketException(
+                            (int)System.Net.Sockets.SocketError.HostNotFound);
+                    }
+
                     var socket = new System.Net.Sockets.Socket(
                         System.Net.Sockets.AddressFamily.InterNetwork,
                         System.Net.Sockets.SocketType.Stream,
@@ -322,7 +334,8 @@ public static class HttpExtensions
 
                     try
                     {
-                        await socket.ConnectAsync(context.DnsEndPoint, cancellationToken)
+                        int port = context.DnsEndPoint.Port > 0 ? context.DnsEndPoint.Port : 443;
+                        await socket.ConnectAsync(ipv4[0], port, cancellationToken)
                             .ConfigureAwait(false);
                         return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
                     }
