@@ -684,6 +684,76 @@ public sealed class ProviderPollerTests
             "SEC-03: no liveness line may contain a URL, key prefix, or auth-header vocabulary");
     }
 
+    // 260922-eqy / OBS-01 — the fetch-done telemetry pins: the done line carries the
+    // reading's remaining %, most-binding window chip, and reset instant for figure
+    // readings, and explicit nulls for figure-less readings. One grep over the log
+    // then answers "how much quota did the fetch see" — the fetch half of the
+    // fetch-vs-render correlation pair (the render half lives in MainWindow).
+    [Fact]
+    public async Task Poller_fetch_done_line_carries_reading_telemetry_fields()
+    {
+        var adapter = new ControllableAdapter();
+        var store = new UsageStore();
+        store.Register("ctrl");
+        using var cts = new CancellationTokenSource();
+        var logger = new RecordingLogger();
+        // Default 10-min interval — the only fetches inside the window are the startup
+        // fetch and the explicit refresh below, so the done-lines under test are
+        // deterministic (no scheduled tick can fire).
+        var poller = new ProviderPoller(adapter, new NullCredentialSource(), store, logger: logger);
+
+        // (a) Ok fetch — OkReading: RemainingPct=70, MostBindingWindow=FiveHour,
+        // AllWindows=null → the done line must carry remaining=70%, window=5H, and
+        // resets=null (the AllWindows-null null-degrade of the reset field is pinned).
+        await poller.StartAsync(cts.Token);
+        (await WaitUntilAsync(() =>
+        {
+            lock (logger.Lines)
+            {
+                return logger.Lines.Any(l => l.Contains("poller fetch done") && l.Contains("status=Ok"));
+            }
+        }, TimeSpan.FromSeconds(3)))
+            .Should().BeTrue("the startup Ok fetch must emit its fetch-done line");
+
+        string okDoneLine;
+        lock (logger.Lines) okDoneLine = logger.Lines.First(l => l.Contains("poller fetch done"));
+        okDoneLine.Should().Contain("status=Ok");
+        okDoneLine.Should().Contain("remaining=70%",
+            "OBS-01: a figure reading's done line must carry its remaining pct");
+        okDoneLine.Should().Contain("window=5H",
+            "OBS-01: a figure reading's done line must carry its most-binding window chip");
+        okDoneLine.Should().Contain("resets=null",
+            "OBS-01: AllWindows=null must degrade the reset field to an explicit null");
+
+        // (b) Error fetch (figure-less) — RetryAfter set makes FetchUsageAsync return
+        // the Error reading; the SAME done-line shape must degrade to explicit nulls
+        // (never a fabricated figure, and never the default-enum 5H chip leaking onto
+        // a figure-less reading).
+        adapter.RetryAfter = TimeSpan.FromSeconds(2);
+        UsageReading manual = await poller.RefreshNowAsync(cts.Token);
+        manual.Status.Should().Be(ReadingStatus.Error, "the refresh must see the rate-limited Error reading");
+        (await WaitUntilAsync(() =>
+        {
+            lock (logger.Lines)
+            {
+                return logger.Lines.Any(l => l.Contains("poller fetch done") && l.Contains("status=Error"));
+            }
+        }, TimeSpan.FromSeconds(3)))
+            .Should().BeTrue("the error fetch must emit its fetch-done line");
+
+        string errorDoneLine;
+        lock (logger.Lines) errorDoneLine = logger.Lines.Last(l => l.Contains("poller fetch done"));
+        errorDoneLine.Should().Contain("status=Error");
+        errorDoneLine.Should().Contain("remaining=null",
+            "a figure-less reading must log an explicit null remaining, never a fabricated pct");
+        errorDoneLine.Should().Contain("window=null",
+            "a figure-less reading must log a null window chip — the default-enum 5H must not leak");
+        errorDoneLine.Should().Contain("resets=null");
+
+        await poller.StopAsync(cts.Token);
+        poller.ExecuteTask!.IsFaulted.Should().BeFalse();
+    }
+
     /// <summary>
     /// G-04-4 liveness — park entry/exit lines. A poller disabled at StartAsync parks
     /// (parked line); re-enabling emits the unparked line as the loop leaves the park.
