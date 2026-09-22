@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -7,6 +8,7 @@ using PlanMeter.Core.Adapters;
 using PlanMeter.Core.Credentials;
 using PlanMeter.Core.Http;
 using PlanMeter.Core.Models;
+using PlanMeter.Core.Presentation;
 using PlanMeter.Core.Store;
 
 namespace PlanMeter.Core.Polling;
@@ -668,9 +670,14 @@ public sealed class ProviderPoller : BackgroundService
             // NAME only (Ok/NearLimit/Error/NotLoggedIn/Unsupported). SEC-03: no URL, no
             // header, no body, no raw exception text. ErrorMessage is the adapter's
             // already-redacted user-facing string (safe to log for support).
+            // OBS-01 (260922-eqy) — the appended remaining/window/resets fields are
+            // NON-SENSITIVE telemetry (pct digits, chip word, local timestamp) per
+            // SEC-03: never a URL, header, body, or key fragment.
+            var (remainingText, windowText, resetsText) = FormatReadingTelemetry(result.Reading);
             _logger?.LogInformation(
-                "poller fetch done (provider={ProviderId}, status={Status}, error={Error})",
-                _adapter.Id, result.Reading.Status, result.Reading.ErrorMessage);
+                "poller fetch done (provider={ProviderId}, status={Status}, error={Error}, remaining={Remaining}, window={Window}, resets={Resets})",
+                _adapter.Id, result.Reading.Status, result.Reading.ErrorMessage,
+                remainingText, windowText, resetsText);
 
             if (sessionExpired)
             {
@@ -692,10 +699,14 @@ public sealed class ProviderPoller : BackgroundService
 
             // G-04-4 liveness — a thrown fetch is ALSO a fetch outcome (Error). The
             // exception MESSAGE is deliberately NOT logged here (SEC-03); it is already
-            // carried redacted inside the Error reading above.
+            // carried redacted inside the Error reading above. OBS-01 (260922-eqy) —
+            // the SAME three telemetry field names keep the done-line shape uniform for
+            // grepping; the exception-degraded ErrorReading is figure-less so all three
+            // render the literal null.
+            var (remainingText, windowText, resetsText) = FormatReadingTelemetry(reading);
             _logger?.LogInformation(
-                "poller fetch done (provider={ProviderId}, status={Status})",
-                _adapter.Id, reading.Status);
+                "poller fetch done (provider={ProviderId}, status={Status}, remaining={Remaining}, window={Window}, resets={Resets})",
+                _adapter.Id, reading.Status, remainingText, windowText, resetsText);
         }
         finally
         {
@@ -712,6 +723,36 @@ public sealed class ProviderPoller : BackgroundService
         MostBindingWindow: default,
         AllWindows: null,
         ErrorMessage: null);
+
+    /// <summary>
+    /// OBS-01 (260922-eqy) — the three fetch-done telemetry fields as PRE-FORMATTED
+    /// strings: remaining (F0 + %), the most-binding window chip word, and the reset
+    /// instant as LOCAL MM-dd HH:mm InvariantCulture (the date is included so a WEEK
+    /// reset days away is unambiguous when correlating a stale-render bug). Gated on
+    /// <see cref="UsageReading.HasFigure"/>; a figure-less reading — whose
+    /// MostBindingWindow is the meaningless default enum — degrades ALL THREE to the
+    /// literal "null" (an ILogger template with a null property argument does not
+    /// reliably render the word null, so null rendering must be deterministic here).
+    /// SEC-03: pct digits, a chip word, and a local timestamp only — never a URL,
+    /// header, body, or key fragment.
+    /// </summary>
+    private static (string Remaining, string Window, string Resets) FormatReadingTelemetry(UsageReading reading)
+    {
+        if (!reading.HasFigure)
+        {
+            return ("null", "null", "null");
+        }
+
+        string remaining = reading.RemainingPct is double rem
+            ? rem.ToString("F0", CultureInfo.InvariantCulture) + "%"
+            : "null";
+        string window = QuotaRowFormatter.ChipLabel(reading.MostBindingWindow);
+        string resets = QuotaRowFormatter.LookupMostBindingReset(reading) is DateTimeOffset resetUtc
+            ? resetUtc.ToLocalTime().ToString("MM-dd HH:mm", CultureInfo.InvariantCulture)
+            : "null";
+
+        return (remaining, window, resets);
+    }
 
     private static UsageReading ErrorReading(string provider, string message, Exception? inner)
     {
