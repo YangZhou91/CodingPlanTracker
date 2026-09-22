@@ -383,4 +383,71 @@ public sealed class QuotaRowFormatterTests
         string expected = $"Updated {fetchedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
         QuotaRowFormatter.FormatLastUpdateLine(fetchedAtUtc).Should().Be(expected);
     }
+
+    // ── 260922-eqy / OBS-02 — FormatAgeCompact render-log age bands ──────────
+
+    [Fact]
+    public void FormatAgeCompact_zero_is_0s()
+    {
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.Zero).Should().Be("0s");
+    }
+
+    [Fact]
+    public void FormatAgeCompact_negative_clamps_to_0s()
+    {
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.FromSeconds(-5)).Should().Be("0s",
+            "a clock-skewed negative age clamps to 0s — never a minus sign in the log line");
+    }
+
+    [Fact]
+    public void FormatAgeCompact_45s_is_45s()
+    {
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.FromSeconds(45)).Should().Be("45s");
+    }
+
+    [Fact]
+    public void FormatAgeCompact_under_1min_truncates_seconds()
+    {
+        // Whole-number truncation: 59.999s renders 59s, never rounds up to 60s.
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.FromMilliseconds(59999)).Should().Be("59s");
+    }
+
+    [Fact]
+    public void FormatAgeCompact_13m_is_13m()
+    {
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.FromMinutes(13)).Should().Be("13m");
+    }
+
+    [Fact]
+    public void FormatAgeCompact_under_60min_truncates_minutes()
+    {
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.FromMinutes(59) + TimeSpan.FromSeconds(59))
+            .Should().Be("59m");
+    }
+
+    [Fact]
+    public void FormatAgeCompact_13h07m_is_13h07m()
+    {
+        // The stale-row scenario's band: hours + zero-padded residual minutes.
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.FromHours(13) + TimeSpan.FromMinutes(7))
+            .Should().Be("13h07m");
+    }
+
+    [Fact]
+    public void FormatAgeCompact_exactly_60min_is_1h00m()
+    {
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.FromHours(1)).Should().Be("1h00m");
+    }
+
+    [Fact]
+    public void FormatAgeCompact_3d5h_is_3d5h()
+    {
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.FromDays(3) + TimeSpan.FromHours(5)).Should().Be("3d5h");
+    }
+
+    [Fact]
+    public void FormatAgeCompact_exactly_24h_is_1d0h()
+    {
+        QuotaRowFormatter.FormatAgeCompact(TimeSpan.FromDays(1)).Should().Be("1d0h");
+    }
 }
