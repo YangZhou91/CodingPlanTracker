@@ -66,6 +66,40 @@ public static class QuotaRowFormatter
     }
 
     /// <summary>
+    /// OBS-02 (260922-eqy) — the render-log age formatter: a compact whole-number
+    /// TRUNCATION of a reading's age for the "ui row rendered" line (mirrors
+    /// FormatCompactUntil's band style). Bands: zero-or-negative → "0s"; under 1 min →
+    /// "{s}s"; under 60 min → "{m}m"; under 24 h → "{h}h{mm:D2}m"; else "{d}d{h}h".
+    /// InvariantCulture digits; no WPF types.
+    /// </summary>
+    public static string FormatAgeCompact(TimeSpan age)
+    {
+        if (age <= TimeSpan.Zero)
+        {
+            return "0s";
+        }
+
+        if (age < TimeSpan.FromMinutes(1))
+        {
+            return $"{(int)Math.Floor(age.TotalSeconds)}s";
+        }
+
+        if (age < TimeSpan.FromHours(1))
+        {
+            return $"{(int)Math.Floor(age.TotalMinutes)}m";
+        }
+
+        if (age < TimeSpan.FromHours(24))
+        {
+            int hours = (int)Math.Floor(age.TotalHours);
+            return $"{hours}h{age.Minutes:D2}m";
+        }
+
+        int days = (int)Math.Floor(age.TotalDays);
+        return $"{days}d{age.Hours}h";
+    }
+
+    /// <summary>
     /// First AllWindows entry whose Kind equals MostBindingWindow; else null.
     /// </summary>
     public static DateTimeOffset? LookupMostBindingReset(UsageReading reading)

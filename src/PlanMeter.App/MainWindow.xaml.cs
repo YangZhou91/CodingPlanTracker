@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,8 +15,10 @@ using PlanMeter.Core.Credentials;
 using PlanMeter.Core.Http;
 using PlanMeter.Core.Models;
 using PlanMeter.Core.Polling;
+using PlanMeter.Core.Presentation;
 using PlanMeter.Core.Refresh;
 using PlanMeter.Core.Store;
+using Serilog;
 
 namespace PlanMeter.App;
 
@@ -407,6 +410,37 @@ public partial class MainWindow : Window
         {
             row.ExitLoadingState();
             row.Render(reading);
+
+            // OBS-02 (260922-eqy) — the render half of the pipeline-observability pair:
+            // exactly ONE line per store-event row render, carrying the SAME
+            // provider-id vocabulary as the poller's "poller fetch done" line so a
+            // lagging row is greppable against its fetch (the 13h-stale-row class of
+            // bug becomes diagnosable from logs alone). Deliberate scope: render
+            // logging lives ONLY in this store-event path — ReRenderAll /
+            // RenderRowInitial renders (theme swaps, enabled-set rebuilds) are
+            // intentionally NOT logged to avoid noise; the per-slot dispatch
+            // guarantees one row per store event, so this is one line per event,
+            // never per-frame. SEC-03: the fields carry the id, pct digits, a chip
+            // word, and the reading age only — never a URL, header, body, or key
+            // fragment.
+            string remainingText = "null", windowText = "null", ageText = "null";
+            if (reading is not null)
+            {
+                if (reading.HasFigure)
+                {
+                    remainingText = reading.RemainingPct is double rem
+                        ? rem.ToString("F0", CultureInfo.InvariantCulture) + "%"
+                        : "null";
+                    windowText = QuotaRowFormatter.ChipLabel(reading.MostBindingWindow);
+                }
+
+                ageText = QuotaRowFormatter.FormatAgeCompact(
+                    DateTimeOffset.UtcNow - reading.FetchedAtUtc);
+            }
+
+            Log.Information(
+                "ui row rendered (provider={ProviderId}, remaining={Remaining}, window={Window}, age={Age})",
+                e.Id, remainingText, windowText, ageText);
         }));
 
         // Aborted operations (dispatcher shut down between queueing and execution) surface
